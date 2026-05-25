@@ -36,41 +36,42 @@ def generate_markdown(cv: OptimizedCV, lang: str = "es") -> str:
     """
     headers = HEADERS.get(lang, HEADERS["es"])
     
-    # Construir la cabecera de contacto
+    # Construir la cabecera de contacto (formato Harvard: single line con ·)
     contact = cv.contact_info
     contact_parts = []
-    if contact.email:
-        contact_parts.append(f"[{contact.email}](mailto:{contact.email})")
-    if contact.phone:
-        contact_parts.append(f"{contact.phone}")
     if contact.location:
-        contact_parts.append(f"{contact.location}")
+        contact_parts.append(contact.location)
+    if contact.phone:
+        contact_parts.append(contact.phone)
+    if contact.email:
+        contact_parts.append(contact.email)
     if contact.linkedin:
-        contact_parts.append(f"[LinkedIn]({contact.linkedin})")
+        contact_parts.append(contact.linkedin)
     if contact.github:
-        contact_parts.append(f"[GitHub]({contact.github})")
+        contact_parts.append(contact.github)
         
-    contact_line = " | ".join(contact_parts)
+    contact_line = " · ".join(contact_parts)
     
-    # Construir el currículum en Markdown
+    # Construir el currículum en Markdown (convención | para layout dos columnas en DOCX)
     md = []
     md.append(f"# {cv.full_name}")
-    md.append(f"{contact_line}\n")
+    md.append(contact_line)
+    
     md.append("---")
     md.append(f"## {headers['summary']}")
     md.append(cv.professional_summary)
     
     md.append("\n---")
     md.append(f"## {headers['skills']}")
-    for skill in cv.optimized_skills:
-        md.append(f"- {skill}")
+    skills_line = ", ".join(cv.optimized_skills)
+    md.append(f"**{headers['skills']}:** {skills_line}.")
     
     if cv.experiences:
         md.append("\n---")
         md.append(f"## {headers['experience']}")
         for exp in cv.experiences:
-            md.append(f"### {exp.role}")
-            md.append(f"**{exp.company}** | *{exp.period}*\n")
+            md.append(f"### {exp.role} | {exp.company}")
+            md.append(f"*{exp.period}*")
             for ach in exp.tailored_achievements:
                 md.append(f"- {ach}")
             md.append("")
@@ -79,8 +80,8 @@ def generate_markdown(cv: OptimizedCV, lang: str = "es") -> str:
         md.append("\n---")
         md.append(f"## {headers['projects']}")
         for proj in cv.projects:
-            md.append(f"### {proj.name}")
-            md.append(f"*{proj.role}* | {proj.period}\n")
+            md.append(f"### {proj.name} | {proj.period}")
+            md.append(f"{proj.role}")
             for ach in proj.achievements:
                 md.append(f"- {ach}")
             md.append("")
@@ -89,8 +90,8 @@ def generate_markdown(cv: OptimizedCV, lang: str = "es") -> str:
     md.append(f"## {headers['education']}")
     
     for edu in cv.education:
-        md.append(f"### {edu.degree}")
-        md.append(f"**{edu.institution}** | *{edu.period}*\n")
+        md.append(f"### {edu.degree} | {edu.institution}")
+        md.append(f"*{edu.period}*")
         for ach in edu.achievements:
             md.append(f"- {ach}")
         md.append("")
@@ -99,7 +100,7 @@ def generate_markdown(cv: OptimizedCV, lang: str = "es") -> str:
         md.append("\n---")
         md.append(f"## {headers['certifications']}")
         for cert in cv.certifications:
-            md.append(f"- **{cert.name}** — {cert.issuer} ({cert.date})")
+            md.append(f"**{cert.name}:** {cert.issuer}, {cert.date}.")
 
     return "\n".join(md)
 
