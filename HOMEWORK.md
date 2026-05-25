@@ -46,39 +46,38 @@ Ambos features se integran como flags opcionales al pipeline existente. El flujo
 
 ### Fase 1 — Feature 1: Mock Interview (`src/services/mock_interview.py`)
 
-- [ ] **1.1** Crear directorio `src/services/` con `__init__.py`
-- [ ] **1.2** Implementar clase `MockInterviewService` (~200 líneas):
+- [x] **1.1** Crear directorio `src/services/` con `__init__.py`
+- [x] **1.2** Implementar clase `MockInterviewService` (~230 líneas):
   - `__init__(self, profile: dict, job_description: str)` — recibe perfil y JD
   - `_build_system_instruction()` — construye el `system_instruction` para Gemini
   - `run_interactive()` — loop de chat en consola, máx 7 preguntas
   - `export_transcript(output_path: str)` — guarda historial como Markdown
-  - Manejo de `KeyboardInterrupt` (Ctrl+C para salir antes)
-- [ ] **1.3** Integrar flag `--mock-interview` en `cv_optimizer.py`
-- [ ] **1.4** Integrar en modo interactivo (`-i`) como opción adicional
+  - Manejo de `KeyboardInterrupt` (Ctrl+C para salir antes) y `RuntimeError` (API caída)
+- [x] **1.3** Integrar flag `--mock-interview` en `cv_optimizer.py`
+- [x] **1.4** Integrar en modo interactivo (`-i`) como opción adicional
+- [x] **1.5** Agregar flag `--interview-only` (solo entrevista, sin re-optimizar CV)
 
 ### Fase 2 — Feature 2: Robustness Judge (`src/services/robustness_judge.py`)
 
-- [ ] **2.1** Implementar modelos Pydantic en `src/models.py` (o en el propio módulo):
+- [x] **2.1** Implementar modelos Pydantic en `src/models.py`:
   - `Alucinacion(linea_cv, dato_inventado, severidad)`
   - `ReporteRobustez(score_honestidad, alucinaciones_detectadas, comentario_auditor)`
-- [ ] **2.2** Implementar clase `RobustnessJudgeService` (~250 líneas):
+- [x] **2.2** Implementar clase `RobustnessJudgeService` (~233 líneas):
   - `__init__(self, profile: dict, job_description: str)` — recibe perfil y JD
   - `_build_audit_prompt(markdown_cv: str)` — construye el prompt de auditoría
   - `run_validation(markdown_cv: str) -> ReporteRobustez` — llama a Gemini con Structured Outputs
   - `export_report(report: ReporteRobustez, output_path: str)` — guarda JSON
-- [ ] **2.3** Integrar flag `--robustness` en `cv_optimizer.py`
-- [ ] **2.4** Integrar en modo interactivo (`-i`)
+- [x] **2.3** Integrar flag `--robustness` en `cv_optimizer.py`
+- [x] **2.4** Integrar en modo interactivo (`-i`)
 
 ### Fase 3 — Integración y testing
 
-- [ ] **3.1** Actualizar `COMANDOS.md` con los nuevos flags
-- [ ] **3.2** Ejecutar ciclo completo:
-  ```bash
-  python src/cv_optimizer.py -j jobs/job_ImproveSolutionsSAS.txt --mock-interview
-  python src/cv_optimizer.py -j jobs/job_ImproveSolutionsSAS.txt --robustness
-  ```
-- [ ] **3.3** Verificar outputs generados en `output/job_ImproveSolutionsSAS/`
-- [ ] **3.4** Repetir con `job_CapgeminiEngineering.txt` y `job_Coopidrogas.txt`
+- [x] **3.1** Actualizar `COMANDOS.md` con los nuevos flags
+- [x] **3.2** Ejecutar ciclo completo con `job_ImproveSolutionsSAS.txt`:
+  - `--mock-interview` ✅ (entrevista + transcripción)
+  - `--robustness` ✅ (reporte JSON generado, score 55/100)
+- [x] **3.3** Verificar outputs generados en `output/job_ImproveSolutionsSAS/`
+- [ ] **3.4** Repetir con `job_CapgeminiEngineering.txt` y `job_Coopidrogas.txt` (requiere llenar los archivos con vacantes reales)
 
 ### Fase Final — Git
 

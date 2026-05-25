@@ -24,6 +24,20 @@ python src/cv_optimizer.py -j jobs/job_ImproveSolutionsSAS.txt --interview-only
 ```bash
 python src/cv_optimizer.py -j jobs/job_ImproveSolutionsSAS.txt --mock-interview
 ```
+
+## Auditoría de robustez (optimizar + auditar)
+
+```bash
+python src/cv_optimizer.py -j jobs/job_ImproveSolutionsSAS.txt --robustness
+```
+
+Genera `robustness_report.json` con score de honestidad (0-100), alucinaciones detectadas y comentario del auditor.
+
+## Todo junto (optimizar + entrevista + auditoría)
+
+```bash
+python src/cv_optimizer.py -j jobs/job_ImproveSolutionsSAS.txt --mock-interview --robustness
+```
 ---
 ## Modo interactivo (recomendado)
 
@@ -82,25 +96,22 @@ python src/cv_optimizer.py -j jobs/oferta.txt -l en
 
 ## Salidas
 
-Cada oferta laboral genera su propia carpeta dentro de `output/` con 3 formatos versionados:
+Cada oferta laboral genera su propia carpeta dentro de `output/` con formatos versionados:
 
 ```
 output/
-  job_improvesolutions/
+  job_ImproveSolutionsSAS/
     optimized_cv_v001.md
     optimized_cv_v001.html
     optimized_cv_v001.docx
-    optimized_cv_v002.md
-    optimized_cv_v002.html
-    optimized_cv_v002.docx
-  job_backend/
-    optimized_cv_v001.md
-    optimized_cv_v001.html
-    optimized_cv_v001.docx
+    interview_transcript.md       ← --mock-interview / --interview-only
+    robustness_report.json        ← --robustness
 ```
 
 - **.md** — Markdown plano, legible en cualquier editor
 - **.html** — Estilo premium, imprimible a PDF desde el navegador
 - **.docx** — Formato Harvard ATS-friendly, editable en Word (recomendado para enviar)
+- **interview_transcript.md** — Transcripción de la entrevista simulada (preguntas, respuestas, feedback)
+- **robustness_report.json** — Reporte de auditoría: score de honestidad, alucinaciones, comentarios
 
 Nunca se sobrescribe. Cada job tiene su espacio aislado.

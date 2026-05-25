@@ -236,6 +236,12 @@ def interactive_mode(base_output: str) -> None:
     if run_interview in ("s", "si", "sí", "y", "yes"):
         _run_interview(profile_path, job_path, lang)
 
+    # 9. ¿Auditoría de robustez?
+    print()
+    run_audit = input("¿Ejecutar auditoría de robustez sobre el CV generado? [s/n]: ").strip().lower()
+    if run_audit in ("s", "si", "sí", "y", "yes"):
+        _run_robustness(profile_path, job_path, lang, job_dir)
+
 
 # ── Interview standalone ──
 
@@ -265,6 +271,52 @@ def _run_interview(profile_path: str, job_path: str, lang: str) -> None:
         job_dir = _job_output_dir(job_path)
         transcript_path = os.path.join(job_dir, "interview_transcript.md")
         interview.export_transcript(transcript_path)
+
+
+# ── Robustness standalone ──
+
+def _run_robustness(profile_path: str, job_path: str, lang: str, job_dir: str) -> None:
+    """
+    Ejecuta la auditoría de robustez sobre el CV ya generado,
+    sin re-optimizar. Lee el último CV .md de la carpeta del job.
+
+    Args:
+        profile_path: Ruta al YAML del perfil.
+        job_path: Ruta al TXT de la vacante.
+        lang: Idioma ('es' o 'en').
+        job_dir: Carpeta de output del job.
+    """
+    from services.robustness_judge import RobustnessJudgeService
+
+    # Buscar el último CV Markdown generado
+    md_files = sorted([
+        f for f in os.listdir(job_dir)
+        if f.startswith("optimized_cv_v") and f.endswith(".md")
+    ], reverse=True)
+
+    if not md_files:
+        print("[ERROR] No se encontró un CV optimizado en la carpeta del job.")
+        print(f"  Buscado en: {job_dir}")
+        return
+
+    cv_path = os.path.join(job_dir, md_files[0])
+    print(f"[INFO] Auditando: {md_files[0]}")
+
+    with open(cv_path, "r", encoding="utf-8") as f:
+        md_content = f.read()
+
+    print("[INFO] Cargando perfil...")
+    profile = load_profile(profile_path)
+    print("[INFO] Cargando oferta...")
+    job_description = load_job_description(job_path)
+
+    judge = RobustnessJudgeService(profile, job_description, lang)
+    try:
+        report = judge.run_validation(md_content)
+        report_path = os.path.join(job_dir, "robustness_report.json")
+        judge.export_report(report, report_path)
+    except RuntimeError as exc:
+        print(f"\n[ERROR] {exc}")
 
 
 # ── Pipeline ──
