@@ -8,18 +8,14 @@ HEADERS = {
     "es": {
         "summary": "Resumen Profesional",
         "skills": "Habilidades y Tecnologías",
-        "skills_label": "Competencias clave",
         "experience": "Experiencia Profesional",
-        "education": "Educación y Proyectos Académicos",
-        "footer": "Currículum optimizado automáticamente utilizando Inteligencia Artificial (Gemini 2.5 Flash)."
+        "education": "Educación y Proyectos Académicos"
     },
     "en": {
         "summary": "Professional Summary",
         "skills": "Skills & Technologies",
-        "skills_label": "Key competencies",
         "experience": "Professional Experience",
-        "education": "Education & Academic Projects",
-        "footer": "Resume automatically optimized using Artificial Intelligence (Gemini 2.5 Flash)."
+        "education": "Education & Academic Projects"
     }
 }
 
@@ -52,9 +48,6 @@ def generate_markdown(cv: OptimizedCV, lang: str = "es") -> str:
         
     contact_line = " | ".join(contact_parts)
     
-    # Generar la sección de habilidades
-    skills_line = ", ".join(cv.optimized_skills)
-
     # Construir el currículum en Markdown
     md = []
     md.append(f"# {cv.full_name}")
@@ -64,7 +57,8 @@ def generate_markdown(cv: OptimizedCV, lang: str = "es") -> str:
     md.append(cv.professional_summary)
     md.append("\n---")
     md.append(f"## {headers['skills']}")
-    md.append(f"**{headers['skills_label']}:** {skills_line}")
+    for skill in cv.optimized_skills:
+        md.append(f"- {skill}")
     md.append("\n---")
     md.append(f"## {headers['experience']}")
     
@@ -85,8 +79,6 @@ def generate_markdown(cv: OptimizedCV, lang: str = "es") -> str:
             md.append(f"- {ach}")
         md.append("") # Línea en blanco para separar
 
-    md.append(f"\n*{headers['footer']}*")
-    
     return "\n".join(md)
 
 def generate_html(cv: OptimizedCV, template_path: str = "templates/cv_template.html", lang: str = "es") -> str:

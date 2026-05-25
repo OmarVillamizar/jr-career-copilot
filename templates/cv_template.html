@@ -238,7 +238,11 @@
         
         <section>
             <h2>{{ headers.skills }}</h2>
-            <p class="summary-text"><strong>{{ headers.skills_label }}:</strong> {{ cv.optimized_skills | join(', ') }}</p>
+            <ul>
+                {% for skill in cv.optimized_skills %}
+                <li>{{ skill }}</li>
+                {% endfor %}
+            </ul>
         </section>
         
         <hr>
@@ -281,9 +285,6 @@
             {% endfor %}
         </section>
         
-        <footer>
-            {{ headers.footer }}
-        </footer>
     </div>
 </body>
 </html>

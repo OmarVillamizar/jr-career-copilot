@@ -41,28 +41,40 @@ def optimize_cv(profile: dict, job_description: str, lang: str = "es") -> Optimi
     # Mapeo descriptivo del idioma de destino para el prompt
     language_name = "Spanish" if lang == "es" else "English"
 
-    # Crear el prompt optimizado aplicando el Efecto Pygmalion
+    # Prompt: Efecto Pigmalión como base (altas expectativas -> alto rendimiento),
+    # pero con restricciones de tono natural, primera persona y sin buzzwords.
     prompt = (
-        "You are an expert technical recruiter, engineering career coach, and master of resume building. "
-        "Your mission is to tailor an engineering junior/trainee's CV to match the target job description. "
-        "You must apply the Pygmalion Effect: frame their achievements, projects, and academic background in "
-        "an empowering, high-potential light, emphasizing technical excellence, problem-solving abilities, and dedication. "
-        "Improve word choice by using strong technical action verbs and industry keywords (e.g., 'Optimized query latency', "
-        "'Designed robust microservices', 'Spearheaded testing coverage'). "
+        "You are an expert technical recruiter and career coach. "
+        "Your job is to tailor a junior engineer's CV to match a specific job description. "
         "\n\n"
-        "--- CRITICAL LANGUAGE RULE ---\n"
-        f"The user has selected the output language: '{language_name}' (code: {lang}).\n"
-        f"YOU MUST OUTPUT ALL TEXT FIELDS (names, role titles, achievements, institution degrees, summaries, skills) "
-        f"EXCLUSIVELY IN '{language_name}'. Even if the original profile or job description is in another language, "
-        f"ensure the final JSON output fields are fully and naturally translated and optimized in '{language_name}'.\n"
+        "--- PYGMALION EFFECT (FOUNDATIONAL) ---\n"
+        "Apply the Pygmalion Effect: frame the candidate's achievements, projects, and academic background in "
+        "an empowering light that emphasizes their technical growth, problem-solving ability, and high potential. "
+        "The goal is to make a junior profile read as someone ready to contribute — not as someone overstating.\n"
         "\n"
-        "--- CRITICAL SAFETY RULES (TRUTHFULNESS) ---\n"
-        "1. NEVER INVENT OR HALLUCINATE any achievements, jobs, degrees, certifications, dates, or grades that are not "
-        "present in the junior engineer's original profile. Doing so would violate professional ethics.\n"
-        "2. You may reframe, expand, and structure existing bullet points to showcase engineering rigor, impact, "
-        "and relevancy, but the underlying core data must remain 100% truthful to the junior engineer's YAML profile.\n"
-        "3. Emphasize keywords from the job description that correspond to the junior engineer's real skills, rearrange the "
-        "skills in order of relevance, and highlight tools they actually used.\n"
+        "--- CRITICAL: FIRST PERSON & NATURAL TONE ---\n"
+        "1. The professional summary MUST be written in FIRST PERSON (e.g., 'I am a systems engineering student...', "
+        "'My experience includes...', 'I have worked with...'). Never refer to the candidate in third person.\n"
+        "2. Use natural, conversational language. Read each sentence aloud — if it sounds like a robot, rewrite it.\n"
+        "3. NEVER use buzzwords: 'spearheaded', 'results-driven', 'synergy', 'proven track record', 'seasoned', "
+        "'game-changer', 'rockstar', 'ninja', 'deep dive', 'leverage', 'utilize' (use 'use').\n"
+        "4. Vary sentence structure. Avoid starting every bullet with the same verb.\n"
+        "\n"
+        "--- LANGUAGE RULE ---\n"
+        f"The output language is '{language_name}' (code: {lang}).\n"
+        f"ALL text fields MUST be in '{language_name}'. Translate naturally, not literally.\n"
+        "\n"
+        "--- SAFETY RULES (TRUTHFULNESS) ---\n"
+        "1. NEVER invent achievements, jobs, degrees, certifications, dates, or grades. "
+        "Only use what exists in the YAML profile.\n"
+        "2. You may rephrase, reorder, and restructure existing bullet points to highlight relevance, "
+        "but the core facts must remain 100% truthful.\n"
+        "3. Prioritize and reorder skills based on the job description. Only include skills the candidate actually has.\n"
+        "4. Include numbers and concrete details only when they exist in the profile. Never fabricate metrics.\n"
+        "\n"
+        "--- JOB DESCRIPTION MIRRORING ---\n"
+        "Reflect the language of the job description. If the posting says 'REST APIs', use 'REST APIs', not just 'APIs'. "
+        "Include both acronyms and full forms (e.g., 'Search Engine Optimization (SEO)').\n"
         "\n"
         f"JUNIOR ENGINEER PROFILE (YAML):\n{yaml.dump(profile, allow_unicode=True)}\n\n"
         f"TARGET JOB DESCRIPTION:\n{job_description}\n"
@@ -75,10 +87,10 @@ def optimize_cv(profile: dict, job_description: str, lang: str = "es") -> Optimi
         config = types.GenerateContentConfig(
             response_mime_type="application/json",
             response_schema=OptimizedCV,
-            temperature=0.2,  # Mayor consistencia y apego a los hechos reales
+            temperature=0.7,  # Mayor naturalidad en redacción; schema Pydantic previene alucinaciones
             system_instruction=(
-                "You are an elite career strategist for engineers. You translate junior engineer / trainee profiles into highly "
-                "targeted, recruiters-attracting resumes based on specific job descriptions, strictly without fabricating data."
+                "You are a senior career coach for engineers. You rewrite junior CVs to match job descriptions, "
+                "keeping a natural human tone and never fabricating data."
             )
         )
         
