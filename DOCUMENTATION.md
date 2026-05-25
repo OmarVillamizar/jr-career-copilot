@@ -125,11 +125,13 @@ El perfil no tiene experiencia laboral real. El modelo solo tiene proyectos acad
 
 Se mantiene `response_schema=OptimizedCV` (validación Pydantic), lo que evita alucinaciones estructurales. La temperatura más alta solo afecta la redacción, no la veracidad de los datos.
 
-### 4. `renderers.py` — Formato Markdown mejorado
+### 4. `renderers.py` + `models.py` — Formato mejorado y secciones nuevas
 
-- Secciones ahora usan `##` con contenido limpio.
-- Se separó `projects` de `education` cuando hay proyectos para mejor parseo ATS.
 - Skills ahora listados con viñetas (`-`) en vez de coma separada para mejor densidad semántica (más peso ATS).
+- Headers simplificados a estándar ATS: "Habilidades", "Educación" (ya no "y Tecnologías" ni "y Proyectos Académicos").
+- **Nueva sección `Proyectos`**: schema Pydantic `OptimizedProject` + renderizado en Markdown y HTML.
+- **Nueva sección `Certificaciones`**: schema Pydantic `Certification` + renderizado en Markdown y HTML.
+- CSS muerto del footer eliminado del template HTML.
 
 ---
 
@@ -138,9 +140,9 @@ Se mantiene `response_schema=OptimizedCV` (validación Pydantic), lo que evita a
 | Práctica | Estado |
 |----------|--------|
 | Single-column layout | ✅ Ya implementado en HTML |
-| Standard section headers | ✅ "Resumen Profesional", "Experiencia", "Educación", "Habilidades" |
+| Standard section headers | ✅ "Resumen Profesional", "Experiencia", "Educación", "Habilidades", "Proyectos", "Certificaciones" |
 | No tables/graphics/icons | ✅ Markdown plano, HTML sin tablas |
-| Quantifiable metrics | ✅ Prompt instruye incluir números donde aplique |
+| Quantifiable metrics | ✅ Prompt instruye fórmula [Verbo] + [Tarea] + [Resultado cuantificable] + [Contexto] |
 | Mirror job description language | ✅ Prompt instruye reflejar lenguaje de la oferta |
 | Avoid AI phrases (spearheaded, etc.) | ✅ Nuevo prompt los prohíbe explícitamente |
 | First person | ✅ Nuevo prompt fuerza primera persona |

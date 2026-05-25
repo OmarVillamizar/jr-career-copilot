@@ -110,7 +110,7 @@
             text-align: justify;
         }
 
-        .experience-item, .education-item {
+        .experience-item, .project-item, .education-item {
             margin-bottom: 20px;
             page-break-inside: avoid;
         }
@@ -152,15 +152,6 @@
             margin-bottom: 4px;
         }
 
-        footer {
-            margin-top: 40px;
-            text-align: center;
-            font-size: 0.75rem;
-            color: #94a3b8;
-            border-top: 1px solid var(--color-border);
-            padding-top: 15px;
-        }
-
         /* Estilos de Impresión */
         @media print {
             body {
@@ -182,10 +173,6 @@
 
             h2 {
                 border-left-color: #000000;
-            }
-
-            footer {
-                display: none;
             }
 
             a {
@@ -267,6 +254,28 @@
         
         <hr>
         
+        {% if cv.projects %}
+        <section>
+            <h2>{{ headers.projects }}</h2>
+            {% for proj in cv.projects %}
+            <div class="project-item">
+                <div class="item-header">
+                    <span class="item-title">{{ proj.name }}</span>
+                    <span class="item-meta">{{ proj.role }}</span>
+                </div>
+                <div class="item-period">{{ proj.period }}</div>
+                <ul>
+                    {% for ach in proj.achievements %}
+                    <li>{{ ach }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endfor %}
+        </section>
+        {% endif %}
+        
+        <hr>
+        
         <section>
             <h2>{{ headers.education }}</h2>
             {% for edu in cv.education %}
@@ -284,6 +293,19 @@
             </div>
             {% endfor %}
         </section>
+        
+        {% if cv.certifications %}
+        <hr>
+        
+        <section>
+            <h2>{{ headers.certifications }}</h2>
+            <ul>
+                {% for cert in cv.certifications %}
+                <li><strong>{{ cert.name }}</strong> — {{ cert.issuer }} ({{ cert.date }})</li>
+                {% endfor %}
+            </ul>
+        </section>
+        {% endif %}
         
     </div>
 </body>

@@ -7,15 +7,19 @@ from models import OptimizedCV
 HEADERS = {
     "es": {
         "summary": "Resumen Profesional",
-        "skills": "Habilidades y Tecnologías",
+        "skills": "Habilidades",
         "experience": "Experiencia Profesional",
-        "education": "Educación y Proyectos Académicos"
+        "projects": "Proyectos",
+        "education": "Educación",
+        "certifications": "Certificaciones"
     },
     "en": {
         "summary": "Professional Summary",
-        "skills": "Skills & Technologies",
+        "skills": "Skills",
         "experience": "Professional Experience",
-        "education": "Education & Academic Projects"
+        "projects": "Projects",
+        "education": "Education",
+        "certifications": "Certifications"
     }
 }
 
@@ -67,7 +71,17 @@ def generate_markdown(cv: OptimizedCV, lang: str = "es") -> str:
         md.append(f"**{exp.company}** | *{exp.period}*\n")
         for ach in exp.tailored_achievements:
             md.append(f"- {ach}")
-        md.append("") # Línea en blanco para separar
+        md.append("")
+        
+    if cv.projects:
+        md.append("---")
+        md.append(f"## {headers['projects']}")
+        for proj in cv.projects:
+            md.append(f"### {proj.name}")
+            md.append(f"*{proj.role}* | {proj.period}\n")
+            for ach in proj.achievements:
+                md.append(f"- {ach}")
+            md.append("")
         
     md.append("---")
     md.append(f"## {headers['education']}")
@@ -77,7 +91,13 @@ def generate_markdown(cv: OptimizedCV, lang: str = "es") -> str:
         md.append(f"**{edu.institution}** | *{edu.period}*\n")
         for ach in edu.achievements:
             md.append(f"- {ach}")
-        md.append("") # Línea en blanco para separar
+        md.append("")
+
+    if cv.certifications:
+        md.append("---")
+        md.append(f"## {headers['certifications']}")
+        for cert in cv.certifications:
+            md.append(f"- **{cert.name}** — {cert.issuer} ({cert.date})")
 
     return "\n".join(md)
 

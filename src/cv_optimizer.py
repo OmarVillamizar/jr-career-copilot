@@ -10,7 +10,9 @@ load_dotenv()
 from models import (
     ContactInfo,
     OptimizedExperience,
+    OptimizedProject,
     OptimizedEducation,
+    Certification,
     OptimizedCV
 )
 from file_io import (
@@ -104,6 +106,21 @@ def main() -> None:
     print("=" * 60)
     print("¡Proceso finalizado con éxito! Éxito en tu postulación laboral.")
     print("=" * 60)
+    print("\n📋 CHECKLIST — Revisa esto antes de enviar tu CV:")
+    checks = [
+        "¿Todas las fechas son correctas y usan formato consistente (MM/AAAA)?",
+        "¿Los nombres de cargos e instituciones son exactos?",
+        "¿Toda métrica o número es verificable (no inventado por la IA)?",
+        "¿La información de contacto es correcta?",
+        "¿Las secciones usan encabezados estándar (Habilidades, Experiencia, Educación)?",
+        "¿Las keywords de la oferta aparecen en contexto, no solo en la lista de skills?",
+        "¿El resumen profesional está en primera persona y suena natural al leerlo en voz alta?",
+        "¿No hay frases genéricas de IA (spearheaded, results-driven, synergy, etc.)?",
+        "¿Revisaste el CV línea por línea antes de enviarlo?"
+    ]
+    for i, check in enumerate(checks, 1):
+        print(f"  [{i}] {check}")
+    print()
 
 if __name__ == "__main__":
     main()

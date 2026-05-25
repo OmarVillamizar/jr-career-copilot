@@ -83,6 +83,21 @@ class TestCVOptimizer(unittest.TestCase):
                     "period": "2020-2025",
                     "achievements": ["Promedio sobresaliente de 9.5", "Proyecto integrador en pruebas."]
                 }
+            ],
+            "projects": [
+                {
+                    "name": "Sistema de Pruebas Automatizadas",
+                    "role": "Desarrollador Principal",
+                    "period": "2024-2025",
+                    "achievements": ["Diseñé una suite de pruebas automatizadas con Pytest y CI/CD."]
+                }
+            ],
+            "certifications": [
+                {
+                    "name": "Python Professional",
+                    "issuer": "Python Institute",
+                    "date": "2025-01"
+                }
             ]
         }"""
 
@@ -158,7 +173,7 @@ class TestCVOptimizer(unittest.TestCase):
         self.assertIn("# Ingeniero Junior de Prueba", markdown_output)
         self.assertIn("## Professional Summary", markdown_output)
         self.assertIn("## Professional Experience", markdown_output)
-        self.assertIn("## Education & Academic Projects", markdown_output)
+        self.assertIn("## Education", markdown_output)
 
     def test_generate_html_premium(self) -> None:
         """
