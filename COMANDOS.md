@@ -1,28 +1,16 @@
 # COMANDOS — jr-career-copilot
 
+python src/cv_optimizer.py -i
+
 ## Requisitos previos
 
-```bash
-pip install -r requirements.txt
-```
-
-Crear archivo `.env` en la raíz con al menos una API key:
-
-```env
-GEMINI_API_KEY=tu_clave_de_gemini
-DEEPSEEK_API_KEY=tu_clave_de_deepseek
-```
-
 Colocar ofertas laborales como `.txt` en `jobs/`:
-
 ```
 jobs/
   oferta_backend.txt
   oferta_soporte.txt
 ```
-
 ---
-
 ## Modo interactivo (recomendado)
 
 ```bash

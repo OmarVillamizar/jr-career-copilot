@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import yaml
 from models import OptimizedCV
 
@@ -136,10 +137,15 @@ def _call_deepseek(prompt: str, language_name: str) -> OptimizedCV:
     try:
         client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com/v1")
 
+        schema_json = json.dumps(OptimizedCV.model_json_schema(), ensure_ascii=False, indent=2)
+
         system_msg = (
             "You are a senior career coach for engineers. You rewrite junior CVs to match job descriptions, "
             "keeping a natural human tone and never fabricating data. "
-            "ALWAYS respond with valid JSON matching the requested structure exactly."
+            "CRITICAL: You MUST respond with a SINGLE valid JSON object that matches the schema below EXACTLY. "
+            "Do NOT omit any required fields. Do NOT wrap the JSON in markdown or extra text. "
+            "Output ONLY the raw JSON.\n\n"
+            f"REQUIRED JSON SCHEMA:\n{schema_json}"
         )
 
         response = client.chat.completions.create(
