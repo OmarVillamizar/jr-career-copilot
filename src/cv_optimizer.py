@@ -358,7 +358,7 @@ def _run_pipeline(profile_path: str, job_path: str, output_base: str,
 
 def _print_checklist() -> None:
     """Imprime el checklist pre-submission en consola."""
-    print("\n📋 CHECKLIST — Revisa esto antes de enviar tu CV:")
+    print("\n[CHECKLIST] Revisa esto antes de enviar tu CV:")
     checks = [
         "¿Todas las fechas son correctas y usan formato consistente (MM/AAAA)?",
         "¿Los nombres de cargos e instituciones son exactos?",

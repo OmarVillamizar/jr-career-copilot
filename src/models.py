@@ -76,3 +76,39 @@ class OptimizedCV(BaseModel):
     certifications: List[Certification] = Field(
         description="List of certifications from the profile. Include all, prioritizing those relevant to the job."
     )
+
+
+# ── Robustness Judge models ──
+
+class Alucinacion(BaseModel):
+    """
+    Una alucinación detectada en el CV generado: dato presente en el CV
+    que NO existe en el perfil YAML original (fuente de verdad).
+    """
+    linea_cv: str = Field(
+        description="Exact line from the generated CV that contains the invented or exaggerated data"
+    )
+    dato_inventado: str = Field(
+        description="What specific data was invented, exaggerated, or cannot be verified against the source profile"
+    )
+    severidad: str = Field(
+        description="Severity level: 'baja' (minor rephrasing), 'media' (unverified claim), 'alta' (fabricated fact)"
+    )
+
+
+class ReporteRobustez(BaseModel):
+    """
+    Reporte completo de auditoría de robustez del CV generado.
+    Evalúa veracidad, consistencia y compliance ético.
+    """
+    score_honestidad: int = Field(
+        ge=0, le=100,
+        description="Overall honesty score (0-100). 100 = fully truthful, no fabricated data."
+    )
+    alucinaciones_detectadas: List[Alucinacion] = Field(
+        default_factory=list,
+        description="List of all detected hallucinations in the CV"
+    )
+    comentario_auditor: str = Field(
+        description="Auditor's detailed commentary: strengths of the CV, risks found, specific recommendations for the candidate"
+    )
