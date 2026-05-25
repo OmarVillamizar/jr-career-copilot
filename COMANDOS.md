@@ -1,0 +1,90 @@
+# COMANDOS — jr-career-copilot
+
+## Requisitos previos
+
+```bash
+pip install -r requirements.txt
+```
+
+Crear archivo `.env` en la raíz con al menos una API key:
+
+```env
+GEMINI_API_KEY=tu_clave_de_gemini
+DEEPSEEK_API_KEY=tu_clave_de_deepseek
+```
+
+Colocar ofertas laborales como `.txt` en `jobs/`:
+
+```
+jobs/
+  oferta_backend.txt
+  oferta_soporte.txt
+```
+
+---
+
+## Modo interactivo (recomendado)
+
+```bash
+python src/cv_optimizer.py -i
+```
+
+El CLI te guía paso a paso. Podés salir con `0` en cualquier menú.
+
+---
+
+## Modo directo (flags)
+
+### Gemini (default)
+
+```bash
+python src/cv_optimizer.py -j jobs/oferta.txt
+```
+
+### DeepSeek
+
+```bash
+python src/cv_optimizer.py -j jobs/oferta.txt -m deepseek
+```
+
+### Con todos los flags
+
+```bash
+python src/cv_optimizer.py -j jobs/oferta.txt -p config/student_profile.yaml -l es -m gemini -o output/mi_cv.md
+```
+
+### En inglés
+
+```bash
+python src/cv_optimizer.py -j jobs/oferta.txt -l en
+```
+
+---
+
+## Flags
+
+| Flag | Default | Qué hace |
+|------|---------|----------|
+| `-j` | *(requerido)* | Archivo .txt con la oferta |
+| `-p` | `config/student_profile.yaml` | Tu perfil YAML |
+| `-o` | `output/optimized_cv.md` | Ruta base de salida |
+| `-l` | `es` | Idioma: `es` o `en` |
+| `-m` | `gemini` | Modelo: `gemini` o `deepseek` |
+| `-t` | `templates/cv_template.html` | Plantilla HTML |
+| `-i` | — | Modo interactivo |
+
+---
+
+## Salidas
+
+Cada ejecución genera archivos versionados automáticamente:
+
+```
+output/
+  optimized_cv_v001.md
+  optimized_cv_v001.html
+  optimized_cv_v002.md
+  optimized_cv_v002.html
+```
+
+Nunca se sobrescribe. Podés ejecutar cuantas veces quieras.

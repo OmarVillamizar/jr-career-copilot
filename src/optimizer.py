@@ -1,49 +1,18 @@
 import os
 import sys
 import yaml
-from google import genai
-from google.genai import types
 from models import OptimizedCV
 
-def optimize_cv(profile: dict, job_description: str, lang: str = "es") -> OptimizedCV:
-    """
-    Se conecta con la API de Gemini 2.5 Flash para optimizar el CV del ingeniero junior
-    basándose en la descripción del empleo utilizando la SDK oficial de google-genai.
-    
-    Args:
-        profile (dict): Datos del perfil del ingeniero junior cargados del YAML.
-        job_description (str): Descripción del empleo objetivo.
-        lang (str): Idioma de salida para los campos del currículum ('es' o 'en').
-        
-    Returns:
-        OptimizedCV: Objeto Pydantic estructurado y validado con el currículum optimizado.
-    """
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        print("\n[ERROR] La variable de entorno GEMINI_API_KEY no está configurada.")
-        print("Para solucionar esto:")
-        print("  1. Consigue una clave de API gratuita en Google AI Studio (https://aistudio.google.com/).")
-        print("  2. Crea un archivo llamado '.env' en la raíz del proyecto.")
-        print("  3. Agrega la siguiente línea al archivo '.env':")
-        print("     GEMINI_API_KEY=tu_clave_de_api_secreta_aqui")
-        print("  4. Alternativamente, puedes exportarla en tu terminal:")
-        print("     export GEMINI_API_KEY=\"tu_clave_de_api_secreta_aqui\"")
-        sys.exit(1)
+# ── Prompt builder (compartido entre proveedores) ──
 
-    print("\n[INFO] Inicializando cliente de Google GenAI...")
-    try:
-        client = genai.Client()
-    except Exception as exc:
-        print("\n[ERROR] Falló la inicialización del cliente de Google GenAI:")
-        print(exc)
-        sys.exit(1)
-
-    # Mapeo descriptivo del idioma de destino para el prompt
+def _build_prompt(profile: dict, job_description: str, lang: str) -> str:
+    """
+    Construye el prompt de optimización de CV con todas las reglas de oro.
+    Compartido entre Gemini y DeepSeek.
+    """
     language_name = "Spanish" if lang == "es" else "English"
 
-    # Prompt: Efecto Pigmalión como base (altas expectativas -> alto rendimiento),
-    # pero con restricciones de tono natural, primera persona y sin buzzwords.
-    prompt = (
+    return (
         "You are an expert technical recruiter and career coach. "
         "Your job is to tailor a junior engineer's CV to match a specific job description. "
         "\n\n"
@@ -85,37 +54,142 @@ def optimize_cv(profile: dict, job_description: str, lang: str = "es") -> Optimi
         f"TARGET JOB DESCRIPTION:\n{job_description}\n"
     )
 
-    print(f"[INFO] Comunicándose con Gemini 2.5 Flash para optimizar el CV (Idioma de salida: {language_name})...")
-    
+
+# ── Gemini provider ──
+
+def _call_gemini(prompt: str, language_name: str) -> OptimizedCV:
+    """
+    Llama a Gemini 2.5 Flash con schema Pydantic y devuelve CV validado.
+    """
+    from google import genai
+    from google.genai import types
+
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        print("\n[ERROR] La variable de entorno GEMINI_API_KEY no está configurada.")
+        print("Para solucionarlo:")
+        print("  1. Consigue una clave de API gratuita en Google AI Studio (https://aistudio.google.com/).")
+        print("  2. Agrega la línea al archivo '.env': GEMINI_API_KEY=tu_clave")
+        sys.exit(1)
+
+    print(f"[INFO] Comunicándose con Gemini 2.5 Flash (Idioma: {language_name})...")
+
     try:
-        # Configurar la llamada estructurada con el esquema Pydantic
+        client = genai.Client()
+    except Exception as exc:
+        print("\n[ERROR] Falló la inicialización del cliente de Google GenAI:")
+        print(exc)
+        sys.exit(1)
+
+    try:
         config = types.GenerateContentConfig(
             response_mime_type="application/json",
             response_schema=OptimizedCV,
-            temperature=0.7,  # Mayor naturalidad en redacción; schema Pydantic previene alucinaciones
+            temperature=0.7,
             system_instruction=(
                 "You are a senior career coach for engineers. You rewrite junior CVs to match job descriptions, "
                 "keeping a natural human tone and never fabricating data."
             )
         )
-        
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt,
             config=config
         )
-        
-        # Validar la respuesta con el esquema Pydantic
         if not response.text:
             raise ValueError("Gemini devolvió una respuesta vacía.")
-            
-        optimized_cv = OptimizedCV.model_validate_json(response.text)
-        print("[INFO] Optimización completada con éxito por la Inteligencia Artificial.")
-        return optimized_cv
+
+        cv = OptimizedCV.model_validate_json(response.text)
+        print("[INFO] Optimización completada (Gemini 2.5 Flash).")
+        return cv
 
     except Exception as exc:
-        print("\n[ERROR] Ocurrió un fallo en la llamada o validación con la API de Gemini:")
+        print("\n[ERROR] Fallo en la llamada o validación con Gemini:")
         print(exc)
-        print("\nConsejo: Verifica tu conexión a internet, comprueba que tu API Key sea correcta y que no ")
-        print("hayas excedido los límites de cuota (Rate Limits) del modelo gemini-2.5-flash.")
+        print("\nConsejo: Verifica tu conexión, API Key y límites de cuota.")
+        sys.exit(1)
+
+
+# ── DeepSeek provider ──
+
+def _call_deepseek(prompt: str, language_name: str) -> OptimizedCV:
+    """
+    Llama a DeepSeek V4 Pro (API compatible con OpenAI) y devuelve CV validado.
+    """
+    try:
+        from openai import OpenAI
+    except ImportError:
+        print("\n[ERROR] El paquete 'openai' no está instalado.")
+        print("Ejecuta: pip install openai")
+        sys.exit(1)
+
+    api_key = os.getenv("DEEPSEEK_API_KEY")
+    if not api_key:
+        print("\n[ERROR] La variable de entorno DEEPSEEK_API_KEY no está configurada.")
+        print("Para solucionarlo:")
+        print("  1. Consigue una clave de API en https://platform.deepseek.com/api_keys")
+        print("  2. Agrega la línea al archivo '.env': DEEPSEEK_API_KEY=tu_clave")
+        sys.exit(1)
+
+    print(f"[INFO] Comunicándose con DeepSeek V4 Pro (Idioma: {language_name})...")
+
+    try:
+        client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com/v1")
+
+        system_msg = (
+            "You are a senior career coach for engineers. You rewrite junior CVs to match job descriptions, "
+            "keeping a natural human tone and never fabricating data. "
+            "ALWAYS respond with valid JSON matching the requested structure exactly."
+        )
+
+        response = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            response_format={"type": "json_object"}
+        )
+
+        raw_json = response.choices[0].message.content
+        if not raw_json:
+            raise ValueError("DeepSeek devolvió una respuesta vacía.")
+
+        cv = OptimizedCV.model_validate_json(raw_json)
+        print("[INFO] Optimización completada (DeepSeek V4 Pro).")
+        return cv
+
+    except Exception as exc:
+        print("\n[ERROR] Fallo en la llamada o validación con DeepSeek:")
+        print(exc)
+        print("\nConsejo: Verifica tu conexión, API Key y saldo en https://platform.deepseek.com/")
+        sys.exit(1)
+
+
+# ── Public API ──
+
+def optimize_cv(profile: dict, job_description: str, lang: str = "es",
+                provider: str = "gemini") -> OptimizedCV:
+    """
+    Optimiza el CV del ingeniero junior usando el proveedor de IA especificado.
+
+    Args:
+        profile (dict): Datos del perfil del ingeniero junior cargados del YAML.
+        job_description (str): Descripción del empleo objetivo.
+        lang (str): Idioma de salida ('es' o 'en').
+        provider (str): Proveedor de IA a usar: 'gemini' (default) o 'deepseek'.
+
+    Returns:
+        OptimizedCV: Objeto Pydantic estructurado y validado con el CV optimizado.
+    """
+    language_name = "Spanish" if lang == "es" else "English"
+    prompt = _build_prompt(profile, job_description, lang)
+
+    if provider == "deepseek":
+        return _call_deepseek(prompt, language_name)
+    elif provider == "gemini":
+        return _call_gemini(prompt, language_name)
+    else:
+        print(f"\n[ERROR] Proveedor desconocido: '{provider}'. Use 'gemini' o 'deepseek'.")
         sys.exit(1)

@@ -168,16 +168,71 @@ Se mantiene `response_schema=OptimizedCV` (validación Pydantic), lo que evita a
 
 ## Cómo usar
 
+### Modo rápido (flags por línea de comandos)
+
 ```bash
-python src/cv_optimizer.py -j jobs/oferta.txt -p config/student_profile.yaml -o output/mi_cv.md -l es
+python src/cv_optimizer.py -j jobs/oferta.txt -p config/student_profile.yaml -o output/mi_cv.md -l es -m gemini
 ```
 
-Flags:
-- `-j` (requerido): ruta al .txt con la descripción de la vacante
-- `-p` (default: `config/student_profile.yaml`): perfil YAML del estudiante
-- `-o` (default: `output/optimized_cv.md`): ruta de salida Markdown (genera .html hermano)
-- `-l` (default: `es`): idioma `es` o `en`
-- `-t` (default: `templates/cv_template.html`): plantilla HTML Jinja2
+### Modo interactivo (recomendado)
+
+```bash
+python src/cv_optimizer.py -i
+```
+
+El CLI te guía paso a paso: modelo → perfil → oferta → idioma → template → confirmación.
+
+### Flags disponibles
+
+| Flag | Default | Descripción |
+|------|---------|-------------|
+| `-j`, `--job` | *(requerido)* | Ruta al `.txt` con la descripción de la vacante. Solo en modo no interactivo. |
+| `-p`, `--profile` | `config/student_profile.yaml` | Ruta al perfil YAML del estudiante. |
+| `-o`, `--output` | `output/optimized_cv.md` | Ruta base de salida. Siempre se auto-versiona (`_v001`, `_v002`, ...). |
+| `-l`, `--lang` | `es` | Idioma: `es` (español) o `en` (inglés). |
+| `-t`, `--template` | `templates/cv_template.html` | Plantilla HTML Jinja2. |
+| `-m`, `--model` | `gemini` | Modelo: `gemini` (Gemini 2.5 Flash) o `deepseek` (DeepSeek V4 Pro). |
+| `-i`, `--interactive` | *(flag)* | Lanza el CLI interactivo. Ignora el resto de flags excepto `-o`. |
+
+### Directorio `jobs/`
+
+Coloca tus descripciones de vacantes como archivos `.txt` dentro de `jobs/`. El CLI interactivo las lista automáticamente para que elijas.
+
+```
+jobs/
+  oferta_backend.txt
+  oferta_soporte.txt
+  oferta_frontend.txt
+```
+
+Si el directorio no existe, el programa lo crea automáticamente al entrar en modo interactivo.
+
+### Versionado de outputs
+
+Cada ejecución genera archivos con número de versión automático. Nunca se sobrescribe:
+
+```
+output/
+  optimized_cv_v001.md
+  optimized_cv_v001.html
+  optimized_cv_v002.md
+  optimized_cv_v002.html
+  ...
+```
+
+El patrón escanea el directorio y toma el siguiente número disponible. MD y HTML siempre quedan pareados con el mismo número de versión.
+
+### Variables de entorno (`.env`)
+
+```env
+# Gemini (Google AI Studio)
+GEMINI_API_KEY=tu_clave
+
+# DeepSeek (platform.deepseek.com)
+DEEPSEEK_API_KEY=tu_clave
+```
+
+Solo necesitás la key del proveedor que vayas a usar. El programa falla con un mensaje claro si falta.
 
 ---
 

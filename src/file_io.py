@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 import yaml
 
 def load_profile(profile_path: str) -> dict:
@@ -102,3 +103,62 @@ def save_html(content: str, output_path: str) -> None:
         print(f"\n[ERROR] No se pudo guardar el archivo HTML en '{output_path}':")
         print(exc)
         sys.exit(1)
+
+def _next_version_path(base_path: str) -> str:
+    """
+    Encuentra la siguiente ruta versionada para no sobrescribir outputs anteriores.
+    
+    Escanea el directorio en busca de archivos con patrón: {base}_v{NNN}.{ext}
+    y devuelve la ruta con el siguiente número disponible.
+    
+    Args:
+        base_path (str): Ruta base deseada (ej: 'output/mi_cv.md').
+        
+    Returns:
+        str: Ruta versionada (ej: 'output/mi_cv_v001.md').
+    """
+    directory = os.path.dirname(base_path) or "."
+    base_name = os.path.splitext(os.path.basename(base_path))[0]
+    extension = os.path.splitext(base_path)[1]
+    
+    pattern = re.compile(rf"^{re.escape(base_name)}_v(\d+)\.md$")
+    max_version = 0
+    
+    if os.path.exists(directory):
+        for fname in os.listdir(directory):
+            match = pattern.match(fname)
+            if match:
+                max_version = max(max_version, int(match.group(1)))
+    
+    next_version = max_version + 1
+    return os.path.join(directory, f"{base_name}_v{next_version:03d}{extension}")
+
+def save_markdown_versioned(content: str, output_path: str) -> str:
+    """
+    Guarda el currículum Markdown sin sobrescribir versiones anteriores.
+    
+    Args:
+        content (str): Contenido en formato Markdown.
+        output_path (str): Ruta base deseada.
+        
+    Returns:
+        str: Ruta final donde se guardó el archivo.
+    """
+    versioned_path = _next_version_path(output_path)
+    save_markdown(content, versioned_path)
+    return versioned_path
+
+def save_html_versioned(content: str, output_path: str) -> str:
+    """
+    Guarda el currículum HTML sin sobrescribir versiones anteriores.
+    
+    Args:
+        content (str): Contenido del documento HTML.
+        output_path (str): Ruta base deseada.
+        
+    Returns:
+        str: Ruta final donde se guardó el archivo.
+    """
+    versioned_path = _next_version_path(output_path)
+    save_html(content, versioned_path)
+    return versioned_path
