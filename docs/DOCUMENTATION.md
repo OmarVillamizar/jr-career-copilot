@@ -247,8 +247,51 @@ Solo necesitás la key del proveedor que vayas a usar. El programa falla con un 
 
 ---
 
+## Auditoría cruzada: DeepSeek vs ChatGPT (reportes de buenas prácticas)
+
+Se comparó el reporte original (`REPORT_GOOD_PRACTICES_DEEPSEEK.md`) con uno nuevo generado por ChatGPT (`REPORT_GOOD_PRACTICES_GPT.md`). Ambos coinciden en ~90% de las prácticas. Las diferencias clave y su resolución:
+
+### Concordancias (ya cubiertas)
+
+| Práctica | Ambos reportes | Estado |
+|----------|---------------|--------|
+| Single-column, sin tablas/gráficos | ✅✅ | Implementado |
+| Headers estándar ATS | ✅✅ | Implementado |
+| Mirror de keywords de la oferta | ✅✅ | En prompt |
+| Métricas cuantificables | ✅✅ | Fórmula de bullets |
+| Sin buzzwords AI | ✅✅ | Prohibidos en prompt |
+| Primera persona | ✅✅ | Prompt lo fuerza |
+| Sin datos personales (edad, foto, etc.) | ✅✅ | Perfil no los incluye |
+| Formato de fechas consistente | ✅✅ | Perfil YAML |
+
+### Discrepancias resueltas
+
+| Práctica | DeepSeek | ChatGPT | Acción |
+|----------|----------|---------|--------|
+| Emojis en contacto | No mencionado | ❌ Explícitamente prohibido (rompen ATS) | **Eliminados** de Markdown y HTML |
+| Secciones vacías | No mencionado | ❌ Implícito (no listar lo que no hay) | **Condicional**: `## Experiencia` solo si `experiences` no vacío |
+| Tiempos verbales | No mencionado | ✅ Presente para actual, pasado para previo | **Añadido al prompt** |
+| Orden cronológico | No mencionado | ✅ Reverse-chronological | **Añadido al prompt** |
+| Keyword stuffing | No mencionado | ❌ Explícitamente penalizado | **Añadido al prompt** |
+| Nombre de archivo | No mencionado | ✅ `Nombre_Apellido_Rol.docx` | Sugerido (futuro) |
+| .docx preferido | ✅ Mencionado | ✅ Mencionado | En roadmap |
+| Fuente (Calibri/Arial) | ✅ Calibri, Arial, Georgia | ✅ Calibri, Arial, Times | HTML usa Inter — ATS-safe al imprimir |
+
+### Solo en ChatGPT (no en DeepSeek)
+
+| Práctica | Prioridad | Estado |
+|----------|-----------|--------|
+| Plain-text test (convertir a .txt y verificar) | Baja | No implementado |
+| Metadata limpia en archivo | Baja | No implementado |
+| Checklist pre-submission automático | Baja | ✅ Ya implementado en consola |
+| No color ni íconos | Media | HTML tiene borde accent — no crítico |
+| Filename con nombre del candidato | Baja | El usuario elige con `-o` |
+
+---
+
 ## Referencias
 
-- `GOOD_PRACTICES.md` — Reporte de buenas prácticas para CV generados por IA (Mayo 2026).
+- `REPORT_GOOD_PRACTICES_DEEPSEEK.md` — Reporte de buenas prácticas (DeepSeek, Mayo 2026).
+- `REPORT_GOOD_PRACTICES_GPT.md` — Reporte de buenas prácticas (ChatGPT, Mayo 2026).
 - Estructura Pydantic documentada en `src/models.py`.
 - Template HTML en `templates/cv_template.html`.

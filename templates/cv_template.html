@@ -197,19 +197,19 @@
             <h1>{{ cv.full_name }}</h1>
             <div class="contact-info">
                 {% if cv.contact_info.email %}
-                    <span>📧 <a href="mailto:{{ cv.contact_info.email }}">{{ cv.contact_info.email }}</a></span>
+                    <span><a href="mailto:{{ cv.contact_info.email }}">{{ cv.contact_info.email }}</a></span>
                 {% endif %}
                 {% if cv.contact_info.phone %}
-                    <span>📱 {{ cv.contact_info.phone }}</span>
+                    <span>{{ cv.contact_info.phone }}</span>
                 {% endif %}
                 {% if cv.contact_info.location %}
-                    <span>📍 {{ cv.contact_info.location }}</span>
+                    <span>{{ cv.contact_info.location }}</span>
                 {% endif %}
                 {% if cv.contact_info.linkedin %}
-                    <span>🔗 <a href="{{ cv.contact_info.linkedin }}" target="_blank">LinkedIn</a></span>
+                    <span><a href="{{ cv.contact_info.linkedin }}" target="_blank">LinkedIn</a></span>
                 {% endif %}
                 {% if cv.contact_info.github %}
-                    <span>💻 <a href="{{ cv.contact_info.github }}" target="_blank">GitHub</a></span>
+                    <span><a href="{{ cv.contact_info.github }}" target="_blank">GitHub</a></span>
                 {% endif %}
             </div>
         </header>
@@ -232,6 +232,7 @@
             </ul>
         </section>
         
+        {% if cv.experiences %}
         <hr>
         
         <section>
@@ -251,6 +252,7 @@
             </div>
             {% endfor %}
         </section>
+        {% endif %}
         
         <hr>
         

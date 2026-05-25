@@ -14,6 +14,11 @@
 6. **ATS-ready** — Formato simple: una columna, viñetas, encabezados estándar. Skills como lista, no como párrafo.
 7. **Sin huella IA** — El output final no debe revelar que fue generado por IA. No hay footer, no hay disclaimer.
 8. **Revisión humana obligatoria** — El CV generado es un borrador optimizado, no el producto final. El usuario siempre revisa antes de enviar.
+9. **Sin emojis ni símbolos especiales** — Caracteres no ASCII (📧📱📍🔗💻) rompen parsers ATS. Usar solo texto plano en la info de contacto.
+10. **Sin secciones vacías** — Si el perfil no tiene experiencia laboral, no renderizar la sección "Experiencia Profesional". Una sección vacía delata debilidad y confunde al ATS.
+11. **Tiempos verbales correctos** — Presente para roles en curso, pasado para roles y proyectos completados.
+12. **Orden cronológico inverso** — Experiencias y proyectos listados del más reciente al más antiguo.
+13. **Keywords en contexto, no stuffing** — Las keywords de la oferta deben aparecer dentro de logros reales, nunca como listas vacías de términos.
 
 ## Reglas de código
 
