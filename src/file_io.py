@@ -162,3 +162,44 @@ def save_html_versioned(content: str, output_path: str) -> str:
     versioned_path = _next_version_path(output_path)
     save_html(content, versioned_path)
     return versioned_path
+
+def save_docx(docx_path: str, output_path: str) -> str:
+    """
+    Mueve/renombra un archivo DOCX temporal a su ruta final.
+    
+    Args:
+        docx_path (str): Ruta del DOCX ya generado por docx_renderer.
+        output_path (str): Ruta de destino.
+        
+    Returns:
+        str: Ruta final del archivo guardado.
+    """
+    output_dir = os.path.dirname(output_path)
+    if output_dir and not os.path.exists(output_dir):
+        os.makedirs(output_dir, exist_ok=True)
+
+    try:
+        # Si es el mismo archivo (ya generado en la ruta correcta), no hacer nada
+        if os.path.abspath(docx_path) != os.path.abspath(output_path):
+            import shutil
+            shutil.move(docx_path, output_path)
+        print(f"[INFO] Currículum optimizado (DOCX) guardado en: '{output_path}'")
+        return output_path
+    except Exception as exc:
+        print(f"\n[ERROR] No se pudo guardar el archivo DOCX en '{output_path}':")
+        print(exc)
+        return docx_path  # Devolver la ruta original si falló el move
+
+def save_docx_versioned(docx_path: str, output_path: str) -> str:
+    """
+    Guarda el currículum DOCX sin sobrescribir versiones anteriores.
+    
+    Args:
+        docx_path (str): Ruta del DOCX ya generado.
+        output_path (str): Ruta base deseada.
+        
+    Returns:
+        str: Ruta final donde se guardó el archivo.
+    """
+    versioned_path = _next_version_path(output_path)
+    return save_docx(docx_path, versioned_path)

@@ -21,7 +21,8 @@ from file_io import (
     save_markdown,
     save_html,
     save_markdown_versioned,
-    save_html_versioned
+    save_html_versioned,
+    save_docx_versioned
 )
 from renderers import (
     HEADERS,
@@ -29,6 +30,7 @@ from renderers import (
     generate_html
 )
 from optimizer import optimize_cv
+from docx_renderer import generate_docx
 
 
 # ── CLI ──
@@ -259,11 +261,23 @@ def _run_pipeline(profile_path: str, job_path: str, output_base: str,
     
     md_final = save_markdown_versioned(md_content, output_md)
     html_final = save_html_versioned(html_content, output_html_base)
+
+    print("[INFO] Generando DOCX (formato Harvard ATS)...")
+    docx_base = os.path.splitext(output_md)[0] + ".docx"
+    # generate_docx recibe contenido markdown y una ruta de salida
+    docx_temp = os.path.join(job_dir, "_temp_cv.docx")
+    docx_result = generate_docx(md_content, docx_temp)
+    if docx_result:
+        docx_final = save_docx_versioned(docx_temp, docx_base)
+    else:
+        docx_final = None
     
     print("=" * 60)
     print("   ¡OPTIMIZACIÓN COMPLETADA!")
     print(f"   Markdown: {md_final}")
     print(f"   HTML:     {html_final}")
+    if docx_final:
+        print(f"   DOCX:     {docx_final}")
     print("=" * 60)
     
     _print_checklist()

@@ -65,18 +65,25 @@ python src/cv_optimizer.py -j jobs/oferta.txt -l en
 
 ## Salidas
 
-Cada oferta laboral genera su propia carpeta dentro de `output/`. Los archivos se versionan automáticamente:
+Cada oferta laboral genera su propia carpeta dentro de `output/` con 3 formatos versionados:
 
 ```
 output/
   job_improvesolutions/
     optimized_cv_v001.md
     optimized_cv_v001.html
+    optimized_cv_v001.docx
     optimized_cv_v002.md
     optimized_cv_v002.html
+    optimized_cv_v002.docx
   job_backend/
     optimized_cv_v001.md
     optimized_cv_v001.html
+    optimized_cv_v001.docx
 ```
+
+- **.md** — Markdown plano, legible en cualquier editor
+- **.html** — Estilo premium, imprimible a PDF desde el navegador
+- **.docx** — Formato Harvard ATS-friendly, editable en Word (recomendado para enviar)
 
 Nunca se sobrescribe. Cada job tiene su espacio aislado.
