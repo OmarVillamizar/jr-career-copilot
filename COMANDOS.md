@@ -10,6 +10,20 @@ jobs/
   oferta_backend.txt
   oferta_soporte.txt
 ```
+
+## Entrevista simulada (sin re-optimizar)
+
+Si ya optimizaste el CV y solo quieres practicar la entrevista:
+
+```bash
+python src/cv_optimizer.py -j jobs/job_ImproveSolutionsSAS.txt --interview-only
+```
+
+## Entrevista simulada (optimizar + entrevista)
+
+```bash
+python src/cv_optimizer.py -j jobs/job_ImproveSolutionsSAS.txt --mock-interview
+```
 ---
 ## Modo interactivo (recomendado)
 
@@ -60,6 +74,9 @@ python src/cv_optimizer.py -j jobs/oferta.txt -l en
 | `-m` | `gemini` | Modelo: `gemini` o `deepseek` |
 | `-t` | `templates/cv_template.html` | Plantilla HTML |
 | `-i` | — | Modo interactivo |
+| `--mock-interview` | — | Optimiza CV + simulador de entrevista técnica |
+| `--interview-only` | — | Solo entrevista (sin re-optimizar). Requiere `-j` |
+| `--robustness` | — | Validador LLM-as-a-Judge sobre el CV generado |
 
 ---
 

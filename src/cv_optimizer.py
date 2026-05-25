@@ -76,6 +76,21 @@ def parse_arguments() -> argparse.Namespace:
         action="store_true",
         help="Lanza el CLI interactivo paso a paso (ignora el resto de flags excepto -o)."
     )
+    parser.add_argument(
+        "--mock-interview",
+        action="store_true",
+        help="Ejecuta el simulador de entrevista técnica con IA después de optimizar el CV."
+    )
+    parser.add_argument(
+        "--interview-only",
+        action="store_true",
+        help="Ejecuta SOLO la entrevista simulada (sin re-optimizar el CV). Requiere -j."
+    )
+    parser.add_argument(
+        "--robustness",
+        action="store_true",
+        help="Ejecuta el validador de robustez (LLM-as-a-Judge) sobre el CV generado."
+    )
     return parser.parse_args()
 
 
@@ -215,6 +230,42 @@ def interactive_mode(base_output: str) -> None:
     # 7. Ejecutar pipeline
     _run_pipeline(profile_path, job_path, base_output, lang, template_path, provider)
 
+    # 8. ¿Entrevista simulada?
+    print()
+    run_interview = input("¿Ejecutar entrevista simulada con Gemini? [s/n]: ").strip().lower()
+    if run_interview in ("s", "si", "sí", "y", "yes"):
+        _run_interview(profile_path, job_path, lang)
+
+
+# ── Interview standalone ──
+
+def _run_interview(profile_path: str, job_path: str, lang: str) -> None:
+    """
+    Ejecuta la entrevista simulada usando el perfil y la vacante,
+    sin re-optimizar el CV.
+
+    Args:
+        profile_path: Ruta al YAML del perfil.
+        job_path: Ruta al TXT de la vacante.
+        lang: Idioma ('es' o 'en').
+    """
+    from services.mock_interview import MockInterviewService
+
+    print("[INFO] Cargando perfil...")
+    profile = load_profile(profile_path)
+    print("[INFO] Cargando oferta...")
+    job_description = load_job_description(job_path)
+
+    interview = MockInterviewService(profile, job_description, lang)
+    try:
+        interview.run_interactive()
+    except Exception as exc:
+        print(f"\n[ERROR] Error inesperado en la entrevista: {exc}")
+    finally:
+        job_dir = _job_output_dir(job_path)
+        transcript_path = os.path.join(job_dir, "interview_transcript.md")
+        interview.export_transcript(transcript_path)
+
 
 # ── Pipeline ──
 
@@ -233,7 +284,9 @@ def _job_output_dir(job_path: str) -> str:
     return output_dir
 
 def _run_pipeline(profile_path: str, job_path: str, output_base: str,
-                  lang: str, template_path: str, provider: str) -> None:
+                  lang: str, template_path: str, provider: str,
+                  run_mock_interview: bool = False,
+                  run_robustness: bool = False) -> None:
     """Ejecuta el pipeline completo de optimización y guarda outputs versionados por job."""
     print("\n" + "=" * 60)
     print("   INICIANDO OPTIMIZACIÓN")
@@ -279,6 +332,24 @@ def _run_pipeline(profile_path: str, job_path: str, output_base: str,
     if docx_final:
         print(f"   DOCX:     {docx_final}")
     print("=" * 60)
+
+    # ── Mock Interview ──
+    if run_mock_interview:
+        from services.mock_interview import MockInterviewService
+
+        interview = MockInterviewService(profile, job_description, lang)
+        interview.run_interactive()
+        transcript_path = os.path.join(job_dir, "interview_transcript.md")
+        interview.export_transcript(transcript_path)
+
+    # ── Robustness Judge ──
+    if run_robustness:
+        from services.robustness_judge import RobustnessJudgeService
+
+        judge = RobustnessJudgeService(profile, job_description, lang)
+        report = judge.run_validation(md_content)
+        report_path = os.path.join(job_dir, "robustness_report.json")
+        judge.export_report(report, report_path)
     
     _print_checklist()
 
@@ -313,6 +384,15 @@ def main() -> None:
     if args.interactive:
         interactive_mode(args.output)
         return
+
+    # --interview-only: solo entrevista, sin re-optimizar CV
+    if args.interview_only:
+        if not args.job:
+            print("\n[ERROR] --interview-only requiere el flag -j/--job.")
+            print("Uso: python cv_optimizer.py -j jobs/oferta.txt --interview-only")
+            sys.exit(1)
+        _run_interview(args.profile, args.job, args.lang)
+        return
     
     if not args.job:
         print("\n[ERROR] Se requiere el flag -j/--job o usar -i/--interactive.")
@@ -321,7 +401,9 @@ def main() -> None:
         sys.exit(1)
     
     _run_pipeline(args.profile, args.job, args.output,
-                  args.lang, args.template, args.model)
+                  args.lang, args.template, args.model,
+                  run_mock_interview=args.mock_interview,
+                  run_robustness=args.robustness)
 
 
 if __name__ == "__main__":

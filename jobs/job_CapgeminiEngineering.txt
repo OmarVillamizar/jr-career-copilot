@@ -1,0 +1,38 @@
+
+Capgemini Engineering
+Compartir
+Mostrar más opciones
+Junior Java Developer 
+Colombia · hace 2 días
+
+Acerca del empleo
+Descripción del rol
+
+Buscamos un/a Junior Java Developer con enfoque en APIs y Arquitecturas de Microservicios, que cuente con experiencia en el diseño, desarrollo e integración de servicios backend escalables. La persona ideal tendrá una base sólida en desarrollo backend con Java, APIs REST, manejo de datos y buenas prácticas de desarrollo, además de experiencia colaborando en equipos ágiles.
+ 
+Responsabilidades principales
+
+Diseñar, desarrollar y mantener APIs RESTful siguiendo estándares de seguridad, rendimiento y escalabilidad.
+Implementar y mantener microservicios desacoplados, orientados a dominios de negocio.
+Integrar aplicaciones mediante APIs internas y externas.
+Colaborar activamente con equipos de Frontend, QA, DevOps y Arquitectura de Software.
+Aplicar buenas prácticas de versionamiento, testing y documentación de APIs.
+Identificar y resolver issues de performance, seguridad y disponibilidad.
+Participar en code reviews y espacios de mejora continua.
+Documentar servicios utilizando Swagger / OpenAPI.
+Asegurar el cumplimiento de lineamientos de calidad y estándares corporativos.
+ 
+Requisitos técnicos
+
+Experiencia entre 2 y 4 años en desarrollo backend.
+Dominio de Java con Spring Boot.
+Experiencia sólida en desarrollo de APIs REST.
+Conocimientos prácticos en arquitectura de microservicios.
+Manejo de bases de datos:
+Relacionales: PostgreSQL, MySQL, SQL Server.
+No relacionales (deseable): MongoDB, Redis.
+Uso de control de versiones con Git.
+Experiencia trabajando con contenedores (Docker).
+Conocimientos básicos de seguridad en APIs (OAuth2, JWT, autenticación y autorización).
+Familiaridad con entornos Cloud (AWS, Azure o GCP – deseable).
+Experiencia trabajando bajo metodologías ágiles (Scrum / Kanban).
