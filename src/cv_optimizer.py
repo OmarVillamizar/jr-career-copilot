@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 import argparse
 from typing import Optional
 from dotenv import load_dotenv
@@ -191,6 +192,8 @@ def interactive_mode(base_output: str) -> None:
         return
     
     # 6. Confirmación
+    job_dir = _job_output_dir(job_path)
+    output_md = os.path.join(job_dir, os.path.basename(base_output))
     print("\n" + "=" * 60)
     print("   RESUMEN DE CONFIGURACIÓN")
     print("=" * 60)
@@ -199,7 +202,7 @@ def interactive_mode(base_output: str) -> None:
     print(f"  Oferta:      {job_path}")
     print(f"  Idioma:      {lang}")
     print(f"  Template:    {template_path}")
-    print(f"  Output:      {base_output} (auto-versionado)")
+    print(f"  Output:      {output_md} (auto-versionado)")
     print()
     
     confirm = input("¿Proceder con la optimización? [s/n]: ").strip().lower()
@@ -213,13 +216,33 @@ def interactive_mode(base_output: str) -> None:
 
 # ── Pipeline ──
 
+def _job_slug(job_path: str) -> str:
+    """Deriva un nombre limpio de carpeta a partir del archivo de oferta laboral."""
+    basename = os.path.splitext(os.path.basename(job_path))[0]
+    # Limpiar prefijos comunes
+    basename = re.sub(r'^(job_description_|job_|oferta_)', '', basename)
+    return f"job_{basename}"
+
+def _job_output_dir(job_path: str) -> str:
+    """Crea (si no existe) y devuelve la carpeta de output para un job específico."""
+    slug = _job_slug(job_path)
+    output_dir = os.path.join("output", slug)
+    os.makedirs(output_dir, exist_ok=True)
+    return output_dir
+
 def _run_pipeline(profile_path: str, job_path: str, output_base: str,
                   lang: str, template_path: str, provider: str) -> None:
-    """Ejecuta el pipeline completo de optimización y guarda outputs versionados."""
+    """Ejecuta el pipeline completo de optimización y guarda outputs versionados por job."""
     print("\n" + "=" * 60)
     print("   INICIANDO OPTIMIZACIÓN")
     print("=" * 60)
     
+    # Derivar carpeta por job
+    job_dir = _job_output_dir(job_path)
+    output_md = os.path.join(job_dir, os.path.basename(output_base))
+    output_html_base = os.path.splitext(output_md)[0] + ".html"
+    
+    print(f"[INFO] Output será guardado en: '{job_dir}/'")
     print(f"[INFO] Cargando perfil: '{profile_path}'...")
     profile = load_profile(profile_path)
     
@@ -234,9 +257,8 @@ def _run_pipeline(profile_path: str, job_path: str, output_base: str,
     print("[INFO] Generando HTML...")
     html_content = generate_html(optimized_cv, template_path, lang)
     
-    md_final = save_markdown_versioned(md_content, output_base)
-    html_base = os.path.splitext(output_base)[0] + ".html"
-    html_final = save_html_versioned(html_content, html_base)
+    md_final = save_markdown_versioned(md_content, output_md)
+    html_final = save_html_versioned(html_content, output_html_base)
     
     print("=" * 60)
     print("   ¡OPTIMIZACIÓN COMPLETADA!")

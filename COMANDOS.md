@@ -1,5 +1,5 @@
 # COMANDOS — jr-career-copilot
-
+COMANDO PARA INICIAR EN MENÚ INTERCATIVO DE CLI:
 python src/cv_optimizer.py -i
 
 ## Requisitos previos
@@ -65,14 +65,18 @@ python src/cv_optimizer.py -j jobs/oferta.txt -l en
 
 ## Salidas
 
-Cada ejecución genera archivos versionados automáticamente:
+Cada oferta laboral genera su propia carpeta dentro de `output/`. Los archivos se versionan automáticamente:
 
 ```
 output/
-  optimized_cv_v001.md
-  optimized_cv_v001.html
-  optimized_cv_v002.md
-  optimized_cv_v002.html
+  job_improvesolutions/
+    optimized_cv_v001.md
+    optimized_cv_v001.html
+    optimized_cv_v002.md
+    optimized_cv_v002.html
+  job_backend/
+    optimized_cv_v001.md
+    optimized_cv_v001.html
 ```
 
-Nunca se sobrescribe. Podés ejecutar cuantas veces quieras.
+Nunca se sobrescribe. Cada job tiene su espacio aislado.

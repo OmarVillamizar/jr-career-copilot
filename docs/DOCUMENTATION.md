@@ -209,18 +209,21 @@ Si el directorio no existe, el programa lo crea automáticamente al entrar en mo
 
 ### Versionado de outputs
 
-Cada ejecución genera archivos con número de versión automático. Nunca se sobrescribe:
+Cada oferta laboral genera su propia carpeta. Los archivos se versionan automáticamente:
 
 ```
 output/
-  optimized_cv_v001.md
-  optimized_cv_v001.html
-  optimized_cv_v002.md
-  optimized_cv_v002.html
-  ...
+  job_improvesolutions/
+    optimized_cv_v001.md
+    optimized_cv_v001.html
+    optimized_cv_v002.md
+    optimized_cv_v002.html
+  job_frontend/
+    optimized_cv_v001.md
+    optimized_cv_v001.html
 ```
 
-El patrón escanea el directorio y toma el siguiente número disponible. MD y HTML siempre quedan pareados con el mismo número de versión.
+La carpeta se nombra a partir del archivo de oferta: `jobs/...improvesolutions.txt` → `output/job_improvesolutions/`. Nunca se sobrescribe. MD y HTML siempre quedan pareados con el mismo número de versión.
 
 ### Variables de entorno (`.env`)
 
