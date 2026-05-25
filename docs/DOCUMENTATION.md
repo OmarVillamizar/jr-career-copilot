@@ -8,7 +8,7 @@ Optimizador de CV para ingenieros junior/trainees con **tres features integradas
 |---------|-------------|------|
 | **CV Optimizer** | Optimiza el CV para una oferta laboral usando IA | `-j archivo.txt` |
 | **Mock Interview** | Simulador de entrevista técnica con IA como reclutador | `--mock-interview` / `--interview-only` |
-| **Robustness Judge** | Auditor LLM-as-a-Judge que detecta alucinaciones en el CV | `--robustness` |
+| **Robustness Judge** | Auditor LLM-as-a-Judge que detecta alucinaciones en el CV | `--robustness` / `--robustness-only` |
 
 Soporta **Gemini 2.5 Flash** y **DeepSeek V4 Pro** en los tres features. El flag `-m` controla el modelo para todo el pipeline.
 
@@ -171,8 +171,11 @@ class ReporteRobustez(BaseModel):
 # Optimizar + auditar
 python src/cv_optimizer.py -j jobs/oferta.txt --robustness
 
+# Solo auditoría (sin re-optimizar)
+python src/cv_optimizer.py -j jobs/oferta.txt --robustness-only
+
 # Con DeepSeek
-python src/cv_optimizer.py -j jobs/oferta.txt --robustness -m deepseek
+python src/cv_optimizer.py -j jobs/oferta.txt --robustness-only -m deepseek
 
 # Todo junto
 python src/cv_optimizer.py -j jobs/oferta.txt --mock-interview --robustness
@@ -239,6 +242,7 @@ python src/cv_optimizer.py -j jobs/oferta.txt --robustness -m deepseek
 | `--mock-interview` | *(flag)* | Optimiza CV + lanza entrevista simulada. |
 | `--interview-only` | *(flag)* | Solo entrevista (sin re-optimizar). Requiere `-j`. |
 | `--robustness` | *(flag)* | Optimiza CV + ejecuta auditoría de robustez. |
+| `--robustness-only` | *(flag)* | Solo auditoría (sin re-optimizar). Requiere `-j`. |
 
 ### Variables de entorno (`.env`)
 

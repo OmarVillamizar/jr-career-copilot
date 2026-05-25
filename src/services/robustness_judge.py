@@ -269,6 +269,14 @@ class RobustnessJudgeService:
             if not raw_json:
                 raise ValueError("DeepSeek devolvió una respuesta vacía.")
 
+            # Limpiar markdown fences si DeepSeek envolvió el JSON
+            raw_json = raw_json.strip()
+            if raw_json.startswith("```"):
+                raw_json = raw_json.split("\n", 1)[-1]  # quitar ```json o ```
+                if raw_json.endswith("```"):
+                    raw_json = raw_json.rsplit("\n", 1)[0]  # quitar ``` final
+                raw_json = raw_json.strip()
+
             report = ReporteRobustez.model_validate_json(raw_json)
             print(f"[INFO] Auditoría completada. Score de honestidad: {report.score_honestidad}/100")
             return report

@@ -1,8 +1,8 @@
 # AGENTS.md — jr-career-copilot
 
 > Proyecto: Optimizador de CV para ingenieros junior.
-> Dueño: Omar Villamizar.
-> Stack: Python + Gemini 2.5 Flash + Pydantic + Jinja2.
+> Estudiante: Omar Villamizar — Código 1152239.
+> Stack: Python + Gemini 2.5 Flash + DeepSeek V4 Pro + Pydantic + Jinja2.
 
 ## Reglas de oro del CV
 

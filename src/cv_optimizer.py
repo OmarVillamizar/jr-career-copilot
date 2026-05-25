@@ -91,6 +91,11 @@ def parse_arguments() -> argparse.Namespace:
         action="store_true",
         help="Ejecuta el validador de robustez (LLM-as-a-Judge) sobre el CV generado."
     )
+    parser.add_argument(
+        "--robustness-only",
+        action="store_true",
+        help="Ejecuta SOLO la auditoría de robustez (sin re-optimizar el CV). Requiere -j."
+    )
     return parser.parse_args()
 
 
@@ -312,13 +317,13 @@ def _run_robustness(profile_path: str, job_path: str, lang: str, job_dir: str, p
     print("[INFO] Cargando oferta...")
     job_description = load_job_description(job_path)
 
-    judge = RobustnessJudgeService(profile, job_description, lang)
     try:
+        judge = RobustnessJudgeService(profile, job_description, lang, provider=provider)
         report = judge.run_validation(md_content)
         report_path = os.path.join(job_dir, "robustness_report.json")
         judge.export_report(report, report_path)
-    except RuntimeError as exc:
-        print(f"\n[ERROR] {exc}")
+    except (RuntimeError, Exception) as exc:
+        print(f"\n[ERROR] Auditoría de robustez fallida: {exc}")
 
 
 # ── Pipeline ──
@@ -446,6 +451,16 @@ def main() -> None:
             print("Uso: python cv_optimizer.py -j jobs/oferta.txt --interview-only")
             sys.exit(1)
         _run_interview(args.profile, args.job, args.lang, provider=args.model)
+        return
+
+    # --robustness-only: solo auditoría, sin re-optimizar CV
+    if args.robustness_only:
+        if not args.job:
+            print("\n[ERROR] --robustness-only requiere el flag -j/--job.")
+            print("Uso: python cv_optimizer.py -j jobs/oferta.txt --robustness-only")
+            sys.exit(1)
+        job_dir = _job_output_dir(args.job)
+        _run_robustness(args.profile, args.job, args.lang, job_dir, provider=args.model)
         return
     
     if not args.job:

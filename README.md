@@ -1,7 +1,9 @@
 # Optimizador de CV con Inteligencia Artificial 🚀
 ### *Herramienta de Ingeniería de Perfil Profesional para Ingenieros Junior y Trainees*
 
-Este proyecto es una plataforma y plantilla de andamiaje lista para producción diseñada con fines académicos y prácticos. Permite a los ingenieros junior y trainees optimizar sus currículums de forma automatizada y estructurada para ofertas laborales específicas utilizando el nuevo **Google GenAI SDK** y el modelo de última generación **Gemini 2.5 Flash**.
+> 🎥 **[Ver video demostración del software](https://youtu.be/eWEP9srRVpI)**
+
+Este proyecto es una plataforma y plantilla de andamiaje lista para producción diseñada con fines académicos y prácticos. Permite a los ingenieros junior y trainees optimizar sus currículums de forma automatizada y estructurada para ofertas laborales específicas utilizando **Gemini 2.5 Flash** y **DeepSeek V4 Pro**.
 
 ---
 

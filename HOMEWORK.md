@@ -25,7 +25,7 @@ Ambos features se integran como flags opcionales al pipeline existente. El flujo
 |---|-----------|--------|
 | 1 | `config/student_profile.yaml` con datos reales de Omar Villamizar | ✅ Completo (85 líneas, skills, educación, proyectos, certificaciones) |
 | 2 | Pipeline base funcional: `cv_optimizer.py` → `optimizer.py` → `renderers.py` | ✅ Completo |
-| 3 | Gemini 2.5 Flash con `response_schema=Pydantic` (Structured Outputs) | ✅ Funcionando (`optimizer.py` línea 93-96) |
+| 3 | Gemini 2.5 Flash + DeepSeek V4 Pro con Structured Outputs | ✅ Funcionando (multi-proveedor) |
 | 4 | Salidas versionadas por job: `.md`, `.html`, `.docx` | ✅ Funcionando (`file_io.py`) |
 | 5 | Prompt con reglas de oro: primera persona, sin buzzwords, sin footer IA | ✅ Implementado |
 | 6 | Sistema de versionado de outputs (`_v001`, `_v002`, ...) | ✅ Funcionando |
@@ -77,13 +77,26 @@ Ambos features se integran como flags opcionales al pipeline existente. El flujo
   - `--mock-interview` ✅ (entrevista + transcripción)
   - `--robustness` ✅ (reporte JSON generado, score 55/100)
 - [x] **3.3** Verificar outputs generados en `output/job_ImproveSolutionsSAS/`
-- [ ] **3.4** Repetir con `job_CapgeminiEngineering.txt` y `job_Coopidrogas.txt` (requiere llenar los archivos con vacantes reales)
+- [x] **3.4** Repetir con `job_CapgeminiEngineering.txt` y `job_Coopidrogas.txt` ✅ (3 vacantes operativas)
 
 ### Fase Final — Git
 
-- [ ] **4.1** Asegurar que la rama es `feat/mock-interview-robustness`
-- [ ] **4.2** Commits limpios (ver formato en AGENTS.md)
-- [ ] **4.3** Push y PR (si aplica)
+- [x] **4.1** Asegurar que la rama es `feat/mock-interview-robustness`
+- [x] **4.2** Commits limpios (ver formato en AGENTS.md)
+- [x] **4.3** Push y PR (si aplica)
+
+---
+
+## 🎯 Extras implementados (fuera del scope original)
+
+| Extra | Descripción |
+|-------|-------------|
+| **Multi-proveedor** | Soporte para DeepSeek V4 Pro en los 3 features (optimizador, entrevista, auditoría). Flag `-m deepseek`. |
+| **`--interview-only`** | Ejecuta solo la entrevista sin re-optimizar el CV. |
+| **`--robustness-only`** | Ejecuta solo la auditoría sin re-optimizar el CV. |
+| **Modo interactivo (`-i`)** | CLI paso a paso que guía al usuario por todas las opciones. |
+| **DOCX Harvard ATS** | Exportación a formato Word con estilo Harvard (`docx_renderer.py`). |
+| **Limpieza de markdown fences** | DeepSeek a veces envuelve JSON en backticks — el parser los limpia automáticamente. |
 
 ---
 

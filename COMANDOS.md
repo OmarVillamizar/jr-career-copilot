@@ -48,6 +48,12 @@ python src/cv_optimizer.py -j jobs/job_ImproveSolutionsSAS.txt --robustness
 
 # Optimizar + auditar (DeepSeek)
 python src/cv_optimizer.py -j jobs/job_ImproveSolutionsSAS.txt --robustness -m deepseek
+
+# Solo auditoría, sin re-optimizar (Gemini)
+python src/cv_optimizer.py -j jobs/job_ImproveSolutionsSAS.txt --robustness-only
+
+# Solo auditoría con DeepSeek
+python src/cv_optimizer.py -j jobs/job_ImproveSolutionsSAS.txt --robustness-only -m deepseek
 ```
 
 Genera `robustness_report.json` con score de honestidad (0-100), alucinaciones detectadas y comentario del auditor.
@@ -120,6 +126,7 @@ python src/cv_optimizer.py -j jobs/oferta.txt -l en
 | `--mock-interview` | — | Optimiza CV + simulador de entrevista técnica |
 | `--interview-only` | — | Solo entrevista (sin re-optimizar). Requiere `-j` |
 | `--robustness` | — | Optimiza CV + auditoría LLM-as-a-Judge |
+| `--robustness-only` | — | Solo auditoría (sin re-optimizar). Requiere `-j` |
 
 ---
 
