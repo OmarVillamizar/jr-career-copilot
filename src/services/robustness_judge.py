@@ -3,18 +3,18 @@ Robustness Judge Service — Validador LLM-as-a-Judge para CV generados.
 
 Audita el CV optimizado contra el perfil YAML original (fuente de verdad)
 para detectar alucinaciones, inconsistencias y violaciones éticas.
-Usa Gemini 2.5 Flash con Structured Outputs (Pydantic).
+Soporta Gemini 2.5 Flash y DeepSeek V4 Pro con Structured Outputs.
 """
 
 import json
 import os
-import sys
-from typing import Optional
+from typing import Literal
 
 import yaml
 
 from google import genai
 from google.genai import types
+from openai import OpenAI
 
 from models import ReporteRobustez
 
@@ -31,10 +31,18 @@ class RobustnessJudgeService:
         profile (dict): Perfil YAML original del candidato (fuente de verdad).
         job_description (str): Descripción de la vacante (contexto).
         lang (str): Idioma ('es' o 'en').
-        client (genai.Client): Cliente de Gemini.
+        provider (str): 'gemini' o 'deepseek'.
     """
 
-    def __init__(self, profile: dict, job_description: str, lang: str = "es") -> None:
+    Provider = Literal["gemini", "deepseek"]
+
+    def __init__(
+        self,
+        profile: dict,
+        job_description: str,
+        lang: str = "es",
+        provider: Provider = "gemini",
+    ) -> None:
         """
         Inicializa el servicio de auditoría.
 
@@ -42,16 +50,27 @@ class RobustnessJudgeService:
             profile: Perfil YAML del candidato (fuente de verdad).
             job_description: Texto completo de la vacante.
             lang: Idioma del reporte ('es' o 'en').
+            provider: Modelo a usar: 'gemini' o 'deepseek'.
         """
         self.profile = profile
         self.job_description = job_description
         self.lang = lang
+        self.provider = provider
 
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise RuntimeError("GEMINI_API_KEY no configurada en .env")
-
-        self.client = genai.Client()
+        if provider == "gemini":
+            api_key = os.getenv("GEMINI_API_KEY")
+            if not api_key:
+                raise RuntimeError("GEMINI_API_KEY no configurada en .env")
+            self._gemini_client = genai.Client()
+            self._openai_client = None
+        elif provider == "deepseek":
+            api_key = os.getenv("DEEPSEEK_API_KEY")
+            if not api_key:
+                raise RuntimeError("DEEPSEEK_API_KEY no configurada en .env")
+            self._openai_client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com/v1")
+            self._gemini_client = None
+        else:
+            raise RuntimeError(f"Proveedor desconocido: '{provider}'. Use 'gemini' o 'deepseek'.")
 
     # ── Prompt ──
 
@@ -69,7 +88,7 @@ class RobustnessJudgeService:
             markdown_cv: Contenido Markdown del CV generado a auditar.
 
         Returns:
-            str: Prompt completo para Gemini.
+            str: Prompt completo para el modelo.
         """
         profile_yaml = yaml.dump(self.profile, allow_unicode=True, indent=2)
 
@@ -168,8 +187,8 @@ class RobustnessJudgeService:
         """
         Ejecuta la auditoría completa del CV generado.
 
-        Llama a Gemini 2.5 Flash con Structured Outputs usando el schema
-        Pydantic ReporteRobustez. Valida la respuesta antes de retornar.
+        Usa Gemini con response_schema o DeepSeek con response_format
+        JSON mode + schema en system prompt.
 
         Args:
             markdown_cv: Contenido Markdown del CV generado a auditar.
@@ -182,14 +201,22 @@ class RobustnessJudgeService:
         """
         prompt = self._build_audit_prompt(markdown_cv)
         language_name = "Spanish" if self.lang == "es" else "English"
+        model_label = "Gemini 2.5 Flash" if self.provider == "gemini" else "DeepSeek V4 Pro"
 
-        print(f"[INFO] Auditando CV con Gemini 2.5 Flash (Idioma: {language_name})...")
+        print(f"[INFO] Auditando CV con {model_label} (Idioma: {language_name})...")
 
+        if self.provider == "gemini":
+            return self._validate_gemini(prompt)
+        else:
+            return self._validate_deepseek(prompt)
+
+    def _validate_gemini(self, prompt: str) -> ReporteRobustez:
+        """Audita usando Gemini 2.5 Flash con response_schema Pydantic."""
         try:
             config = types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_schema=ReporteRobustez,
-                temperature=0.3,  # Baja temperatura para consistencia en auditoría
+                temperature=0.3,
                 system_instruction=(
                     "You are a precision auditor. Your only job is to compare two documents "
                     "and detect factual discrepancies. Be conservative: only flag data that is "
@@ -197,23 +224,56 @@ class RobustnessJudgeService:
                     "Respond ONLY with valid JSON matching the schema."
                 ),
             )
-            response = self.client.models.generate_content(
+            response = self._gemini_client.models.generate_content(
                 model="gemini-2.5-flash",
                 contents=prompt,
                 config=config,
             )
-
             if not response.text:
                 raise ValueError("Gemini devolvió una respuesta vacía.")
 
             report = ReporteRobustez.model_validate_json(response.text)
             print(f"[INFO] Auditoría completada. Score de honestidad: {report.score_honestidad}/100")
             return report
-
         except Exception as exc:
-            raise RuntimeError(
-                f"Falló la auditoría del CV: {exc}"
-            ) from exc
+            raise RuntimeError(f"Falló la auditoría con Gemini: {exc}") from exc
+
+    def _validate_deepseek(self, prompt: str) -> ReporteRobustez:
+        """Audita usando DeepSeek V4 Pro con JSON mode + schema en system prompt."""
+        try:
+            schema_json = json.dumps(
+                ReporteRobustez.model_json_schema(), ensure_ascii=False, indent=2
+            )
+
+            system_msg = (
+                "You are a precision auditor. Your only job is to compare two documents "
+                "and detect factual discrepancies. Be conservative: only flag data that is "
+                "clearly absent from the source profile. Do not flag rephrasing as hallucination.\n\n"
+                "CRITICAL: You MUST respond with a SINGLE valid JSON object that matches "
+                "the schema below EXACTLY. Do NOT omit any required fields. Do NOT wrap "
+                "the JSON in markdown or extra text. Output ONLY the raw JSON.\n\n"
+                f"REQUIRED JSON SCHEMA:\n{schema_json}"
+            )
+
+            response = self._openai_client.chat.completions.create(
+                model="deepseek-chat",
+                messages=[
+                    {"role": "system", "content": system_msg},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.3,
+                response_format={"type": "json_object"},
+            )
+
+            raw_json = response.choices[0].message.content
+            if not raw_json:
+                raise ValueError("DeepSeek devolvió una respuesta vacía.")
+
+            report = ReporteRobustez.model_validate_json(raw_json)
+            print(f"[INFO] Auditoría completada. Score de honestidad: {report.score_honestidad}/100")
+            return report
+        except Exception as exc:
+            raise RuntimeError(f"Falló la auditoría con DeepSeek: {exc}") from exc
 
     # ── Export ──
 

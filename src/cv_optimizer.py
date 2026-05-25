@@ -231,21 +231,22 @@ def interactive_mode(base_output: str) -> None:
     _run_pipeline(profile_path, job_path, base_output, lang, template_path, provider)
 
     # 8. ¿Entrevista simulada?
+    model_name = "Gemini" if provider == "gemini" else "DeepSeek"
     print()
-    run_interview = input("¿Ejecutar entrevista simulada con Gemini? [s/n]: ").strip().lower()
+    run_interview = input(f"¿Ejecutar entrevista simulada con {model_name}? [s/n]: ").strip().lower()
     if run_interview in ("s", "si", "sí", "y", "yes"):
-        _run_interview(profile_path, job_path, lang)
+        _run_interview(profile_path, job_path, lang, provider=provider)
 
     # 9. ¿Auditoría de robustez?
     print()
-    run_audit = input("¿Ejecutar auditoría de robustez sobre el CV generado? [s/n]: ").strip().lower()
+    run_audit = input(f"¿Ejecutar auditoría de robustez con {model_name}? [s/n]: ").strip().lower()
     if run_audit in ("s", "si", "sí", "y", "yes"):
-        _run_robustness(profile_path, job_path, lang, job_dir)
+        _run_robustness(profile_path, job_path, lang, job_dir, provider=provider)
 
 
 # ── Interview standalone ──
 
-def _run_interview(profile_path: str, job_path: str, lang: str) -> None:
+def _run_interview(profile_path: str, job_path: str, lang: str, provider: str = "gemini") -> None:  # type: ignore[assignment]
     """
     Ejecuta la entrevista simulada usando el perfil y la vacante,
     sin re-optimizar el CV.
@@ -254,6 +255,7 @@ def _run_interview(profile_path: str, job_path: str, lang: str) -> None:
         profile_path: Ruta al YAML del perfil.
         job_path: Ruta al TXT de la vacante.
         lang: Idioma ('es' o 'en').
+        provider: Modelo ('gemini' o 'deepseek').
     """
     from services.mock_interview import MockInterviewService
 
@@ -262,7 +264,7 @@ def _run_interview(profile_path: str, job_path: str, lang: str) -> None:
     print("[INFO] Cargando oferta...")
     job_description = load_job_description(job_path)
 
-    interview = MockInterviewService(profile, job_description, lang)
+    interview = MockInterviewService(profile, job_description, lang, provider=provider)
     try:
         interview.run_interactive()
     except Exception as exc:
@@ -275,7 +277,7 @@ def _run_interview(profile_path: str, job_path: str, lang: str) -> None:
 
 # ── Robustness standalone ──
 
-def _run_robustness(profile_path: str, job_path: str, lang: str, job_dir: str) -> None:
+def _run_robustness(profile_path: str, job_path: str, lang: str, job_dir: str, provider: str = "gemini") -> None:
     """
     Ejecuta la auditoría de robustez sobre el CV ya generado,
     sin re-optimizar. Lee el último CV .md de la carpeta del job.
@@ -389,7 +391,7 @@ def _run_pipeline(profile_path: str, job_path: str, output_base: str,
     if run_mock_interview:
         from services.mock_interview import MockInterviewService
 
-        interview = MockInterviewService(profile, job_description, lang)
+        interview = MockInterviewService(profile, job_description, lang, provider=provider)
         interview.run_interactive()
         transcript_path = os.path.join(job_dir, "interview_transcript.md")
         interview.export_transcript(transcript_path)
@@ -398,7 +400,7 @@ def _run_pipeline(profile_path: str, job_path: str, output_base: str,
     if run_robustness:
         from services.robustness_judge import RobustnessJudgeService
 
-        judge = RobustnessJudgeService(profile, job_description, lang)
+        judge = RobustnessJudgeService(profile, job_description, lang, provider=provider)
         report = judge.run_validation(md_content)
         report_path = os.path.join(job_dir, "robustness_report.json")
         judge.export_report(report, report_path)
@@ -443,7 +445,7 @@ def main() -> None:
             print("\n[ERROR] --interview-only requiere el flag -j/--job.")
             print("Uso: python cv_optimizer.py -j jobs/oferta.txt --interview-only")
             sys.exit(1)
-        _run_interview(args.profile, args.job, args.lang)
+        _run_interview(args.profile, args.job, args.lang, provider=args.model)
         return
     
     if not args.job:

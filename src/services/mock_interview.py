@@ -1,43 +1,51 @@
 """
 Mock Interview Service — Simulador interactivo de entrevista técnica.
 
-Gemini actúa como reclutador técnico, hace preguntas contextuales
-basadas en el CV del candidato y la descripción de la vacante.
-Máximo 7 preguntas, luego cierra con feedback.
+Soporta Gemini 2.5 Flash y DeepSeek V4 Pro. Actúa como reclutador
+técnico, hace preguntas contextuales basadas en el CV del candidato
+y la descripción de la vacante. Máximo 7 preguntas, luego feedback.
 """
 
 import os
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal, cast
 
 import yaml
 
 from google import genai
 from google.genai import types
+from openai import OpenAI
 
 
 class MockInterviewService:
     """
     Servicio de entrevista técnica simulada con IA.
 
-    Usa multi-turn chat con Gemini 2.5 Flash. El entrevistador
-    solo pregunta sobre tecnologías presentes en el CV del
-    candidato y en la descripción del puesto. Tras 7 preguntas,
-    proporciona feedback constructivo.
+    Usa multi-turn chat con Gemini 2.5 Flash o DeepSeek V4 Pro.
+    El entrevistador solo pregunta sobre tecnologías presentes en
+    el CV del candidato y en la descripción del puesto. Tras 7
+    preguntas, proporciona feedback constructivo.
 
     Atributos:
         profile (dict): Perfil YAML del candidato.
         job_description (str): Descripción de la vacante.
         lang (str): Idioma ('es' o 'en').
-        client (genai.Client): Cliente de Gemini.
+        provider (str): 'gemini' o 'deepseek'.
         message_history (list): Historial multi-turn para el chat.
         transcript_entries (list): Preguntas y respuestas para exportar.
         candidate_name (str): Nombre completo del candidato.
     """
 
     MAX_QUESTIONS = 7
+    Provider = Literal["gemini", "deepseek"]
 
-    def __init__(self, profile: dict, job_description: str, lang: str = "es") -> None:
+    def __init__(
+        self,
+        profile: dict,
+        job_description: str,
+        lang: str = "es",
+        provider: Provider = "gemini",
+    ) -> None:
         """
         Inicializa el servicio de entrevista.
 
@@ -45,16 +53,32 @@ class MockInterviewService:
             profile: Perfil YAML del candidato.
             job_description: Texto completo de la vacante.
             lang: Idioma de la entrevista ('es' o 'en').
+            provider: Modelo a usar: 'gemini' o 'deepseek'.
         """
         self.profile = profile
         self.job_description = job_description
         self.lang = lang
+        self.provider = provider
 
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise RuntimeError("GEMINI_API_KEY no configurada en .env")
+        if provider == "gemini":
+            api_key = os.getenv("GEMINI_API_KEY")
+            if not api_key:
+                raise RuntimeError("GEMINI_API_KEY no configurada en .env")
+            self._gemini_client = genai.Client()
+            self._openai_client = None
+        elif provider == "deepseek":
+            api_key = os.getenv("DEEPSEEK_API_KEY")
+            if not api_key:
+                raise RuntimeError("DEEPSEEK_API_KEY no configurada en .env")
+            try:
+                from openai import OpenAI
+            except ImportError:
+                raise RuntimeError("El paquete 'openai' no está instalado. Ejecuta: pip install openai")
+            self._openai_client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com/v1")
+            self._gemini_client = None
+        else:
+            raise RuntimeError(f"Proveedor desconocido: '{provider}'. Use 'gemini' o 'deepseek'.")
 
-        self.client = genai.Client()
         self.message_history: list[dict[str, Any]] = []
         self.transcript_entries: list[dict[str, str]] = []
         self.candidate_name = profile.get("personal_info", {}).get("full_name", "Candidato")
@@ -67,10 +91,10 @@ class MockInterviewService:
 
         Incluye el perfil del candidato, la vacante, y las reglas
         de la entrevista (límite de preguntas, temas permitidos,
-        tono, feedback).
+        tono, feedback). Compartido entre Gemini y DeepSeek.
 
         Returns:
-            str: System instruction lista para pasar a Gemini.
+            str: System instruction.
         """
         profile_yaml = yaml.dump(self.profile, allow_unicode=True, indent=2)
 
@@ -138,11 +162,12 @@ class MockInterviewService:
                 "after the 7th answer."
             )
 
-    # ── Gemini API helpers ──
+    # ── Model call (provider dispatch) ──
 
     def _call_model(self) -> str:
         """
-        Llama a Gemini con el historial acumulado y devuelve la respuesta.
+        Llama al modelo configurado (Gemini o DeepSeek) con el historial
+        acumulado y devuelve la respuesta.
 
         Returns:
             str: Texto de respuesta del modelo.
@@ -150,12 +175,19 @@ class MockInterviewService:
         Raises:
             RuntimeError: Si la API falla o devuelve vacío.
         """
+        if self.provider == "gemini":
+            return self._call_gemini()
+        else:
+            return self._call_deepseek()
+
+    def _call_gemini(self) -> str:
+        """Llama a Gemini 2.5 Flash con multi-turn chat."""
         try:
             config = types.GenerateContentConfig(
                 system_instruction=self._build_system_instruction(),
-                temperature=0.8,  # Más variación para tono conversacional
+                temperature=0.8,
             )
-            response = self.client.models.generate_content(
+            response = self._gemini_client.models.generate_content(
                 model="gemini-2.5-flash",
                 contents=self.message_history,
                 config=config,
@@ -165,6 +197,30 @@ class MockInterviewService:
             return response.text
         except Exception as exc:
             raise RuntimeError(f"Falló la comunicación con Gemini: {exc}") from exc
+
+    def _call_deepseek(self) -> str:
+        """Llama a DeepSeek V4 Pro con multi-turn chat (API OpenAI-compatible)."""
+        try:
+            system_instruction = self._build_system_instruction()
+            openai_messages = [{"role": "system", "content": system_instruction}]
+
+            for msg in self.message_history:
+                role = "assistant" if msg["role"] == "model" else "user"
+                text = msg["parts"][0]["text"]
+                openai_messages.append({"role": role, "content": text})
+
+            response = self._openai_client.chat.completions.create(
+                model="deepseek-chat",
+                messages=openai_messages,
+                temperature=0.8,
+            )
+
+            content = response.choices[0].message.content
+            if not content:
+                raise ValueError("DeepSeek devolvió una respuesta vacía.")
+            return content
+        except Exception as exc:
+            raise RuntimeError(f"Falló la comunicación con DeepSeek: {exc}") from exc
 
     # ── Interactive Loop ──
 
@@ -182,6 +238,7 @@ class MockInterviewService:
         print("   ENTREVISTA TÉCNICA SIMULADA")
         print("=" * 60)
         print(f"\nCandidato: {self.candidate_name}")
+        print(f"Modelo: {'Gemini 2.5 Flash' if self.provider == 'gemini' else 'DeepSeek V4 Pro'}")
         print(f"Preguntas máximas: {self.MAX_QUESTIONS}")
         print("Presiona Ctrl+C en cualquier momento para salir.\n")
 
@@ -262,7 +319,6 @@ class MockInterviewService:
 
         except KeyboardInterrupt:
             print("\n\n[INFO] Entrevista interrumpida por el usuario.")
-            # Guardamos lo que haya
             self._feedback_text = "(Entrevista interrumpida antes del feedback)"
 
         print("=" * 60)
@@ -293,6 +349,7 @@ class MockInterviewService:
             f"# Transcripción de Entrevista Técnica",
             "",
             f"**Candidato:** {self.candidate_name}",
+            f"**Modelo:** {'Gemini 2.5 Flash' if self.provider == 'gemini' else 'DeepSeek V4 Pro'}",
             f"**Preguntas realizadas:** {total}/{self.MAX_QUESTIONS}",
             f"**Fecha:** {today}",
             "",

@@ -2,7 +2,15 @@
 
 ## Propósito del programa
 
-Optimizador de CV para ingenieros junior/trainees. Toma un perfil YAML del estudiante y una descripción de vacante, los envía a la API de Gemini 2.5 Flash, y produce un CV optimizado en Markdown y HTML listo para postular.
+Optimizador de CV para ingenieros junior/trainees con **tres features integradas**:
+
+| Feature | Descripción | Flag |
+|---------|-------------|------|
+| **CV Optimizer** | Optimiza el CV para una oferta laboral usando IA | `-j archivo.txt` |
+| **Mock Interview** | Simulador de entrevista técnica con IA como reclutador | `--mock-interview` / `--interview-only` |
+| **Robustness Judge** | Auditor LLM-as-a-Judge que detecta alucinaciones en el CV | `--robustness` |
+
+Soporta **Gemini 2.5 Flash** y **DeepSeek V4 Pro** en los tres features. El flag `-m` controla el modelo para todo el pipeline.
 
 **Público objetivo:** Omar Villamizar (estudiante 9no semestre Ing. Sistemas, UFPS).
 
@@ -12,167 +20,186 @@ Optimizador de CV para ingenieros junior/trainees. Toma un perfil YAML del estud
 
 ```
 student_profile.yaml ──┐
-                       ├──> file_io.py ──> optimizer.py (Gemini API) ──> OptimizedCV (Pydantic)
-job_description.txt ───┘                                                      │
-                                                                         ┌─────┴──────┐
-                                                                         ▼            ▼
-                                                                  renderers.py   renderers.py
-                                                                      │              │
-                                                                      ▼              ▼
-                                                               optimized_cv.md  optimized_cv.html
+                       ├──> file_io.py ──> optimizer.py ──> OptimizedCV (Pydantic)
+job_description.txt ───┘         │                    │
+                                 │                    ├──> renderers.py → .md, .html
+                  ┌──────────────┤                    └──> docx_renderer.py → .docx
+                  │              │
+                  ▼              ▼
+          services/        services/
+      mock_interview.py  robustness_judge.py
+            │                    │
+            ▼                    ▼
+   interview_transcript.md  robustness_report.json
 ```
 
 ### Módulos
 
 | Módulo | Rol |
 |--------|-----|
-| `cv_optimizer.py` | Entry point. CLI args, orquestación del pipeline |
-| `file_io.py` | Carga YAML de perfil, carga .txt de vacante, guarda outputs |
-| `models.py` | Schemas Pydantic (`ContactInfo`, `OptimizedExperience`, `OptimizedEducation`, `OptimizedCV`) |
-| `optimizer.py` | Prompt engineering + llamada Gemini 2.5 Flash con `response_schema` |
+| `cv_optimizer.py` | Entry point. CLI args, orquestación del pipeline + interview + robustness |
+| `file_io.py` | Carga YAML de perfil, carga .txt de vacante, guarda outputs versionados |
+| `models.py` | Schemas Pydantic: `OptimizedCV`, `Alucinacion`, `ReporteRobustez` |
+| `optimizer.py` | Prompt engineering + llamada Gemini/DeepSeek con `response_schema` |
 | `renderers.py` | Genera Markdown plano y HTML con Jinja2 |
+| `docx_renderer.py` | Conversor Markdown → DOCX estilo Harvard con python-docx |
+| `services/mock_interview.py` | `MockInterviewService`: multi-turn chat, 7 preguntas + feedback |
+| `services/robustness_judge.py` | `RobustnessJudgeService`: auditoría con Structured Outputs, score 0-100 |
 
 ### Stack técnico
 
 - Python 3.10+
-- `google-genai` SDK (Gemini 2.5 Flash)
-- Pydantic (validación estructurada)
+- `google-genai` SDK (Gemini 2.5 Flash) — Structured Outputs vía `response_schema`
+- `openai` SDK (DeepSeek V4 Pro) — API compatible con OpenAI, JSON mode
+- Pydantic ≥2.6 (validación estructurada en optimizador y auditor)
 - Jinja2 (template HTML)
-- `python-dotenv` (API key)
+- Python-docx (exportación DOCX Harvard ATS)
+- `python-dotenv` (API keys)
 
 ---
 
-## Diagnóstico del output actual (`optimized_cv.md`)
+## Multi-proveedor: Gemini y DeepSeek
 
-### Problema 1: Tercera persona en resumen profesional
+El flag `-m` selecciona el modelo para **los tres features simultáneamente**:
 
-**Output actual:** *"Omar Jesús Villamizar Isaza es un prometedor estudiante..."*
+```bash
+# Gemini (default) — optimiza, entrevista y audita con Gemini
+python src/cv_optimizer.py -j jobs/oferta.txt --mock-interview --robustness
 
-**Causa raíz:** El prompt en `optimizer.py` (líneas 46-51) usa *"their achievements"*, *"their academic background"*, *"them"*. El system prompt trata al candidato como *"junior engineer"*. El modelo interpreta que debe describir al candidato como si un reclutador hablara de él.
+# DeepSeek — optimiza, entrevista y audita con DeepSeek
+python src/cv_optimizer.py -j jobs/oferta.txt --mock-interview --robustness -m deepseek
+```
 
-**Qué dice GOOD_PRACTICES.md:** La sección 6.5 exige *"Inject personality & specificity"*. Un CV en primera persona suena a persona real, no a ficha de reclutador.
+| Proveedor | Modelo | SDK | Structured Outputs |
+|-----------|--------|-----|-------------------|
+| `gemini` | `gemini-2.5-flash` | `google-genai` | `response_schema=Pydantic` |
+| `deepseek` | `deepseek-chat` | `openai` | `response_format: json_object` + schema en prompt |
 
-**Solución:** Reescribir el prompt para que genere el resumen en **primera persona** y suene a humano real hablando de sí mismo.
-
-### Problema 2: Lenguaje excesivamente "AI"
-
-**Output actual:** *"innata habilidad"*, *"sólida base"*, *"prometedor estudiante"*, *"enfoque proactivo"*.
-
-**Causa raíz:** El prompt pide explícitamente aplicar el *"Pygmalion Effect"* y usar *"strong technical action verbs (e.g., 'Optimized query latency', 'Designed robust microservices', 'Spearheaded testing coverage')"*. Esto incentiva exactamente el lenguaje que GOOD_PRACTICES.md recomienda evitar.
-
-**Qué dice GOOD_PRACTICES.md:** Sección 6.3 — *"Avoid overused AI phrases"*:
-- ❌ "Spearheaded"
-- ❌ "Seasoned professional"
-- ❌ "Results-driven"
-- ❌ "Proven track record"
-- ❌ Overly complex sentence structures
-
-La sección 6.1 reporta que **49% de los CV generados por IA son descartados** automáticamente por reclutadores.
-
-**Solución:** Eliminar referencias al Pygmalion Effect, eliminar buzzwords del prompt, e instruir tono natural y conversacional.
-
-### Problema 3: Footer revela generación por IA
-
-**Output actual:** *"Currículum optimizado automáticamente utilizando Inteligencia Artificial (Gemini 2.5 Flash)."*
-
-**Qué dice GOOD_PRACTICES.md:** Un reclutador que ve esto descarta el CV automáticamente.
-
-**Solución:** Eliminar el footer del Markdown y HTML, o hacerlo opcional (solo debug).
-
-### Problema 4: Temperatura baja (0.2)
-
-**Valor actual:** `temperature=0.2`
-
-**Qué causa:** Texto robótico, predecible, sin variación natural. El modelo elige siempre las palabras más probables, que son las que suenan a "CV genérico".
-
-**Solución:** Subir a `temperature=0.7` para permitir redacción más natural sin riesgo de alucinación (el schema Pydantic ya fuerza la estructura).
-
-### Problema 5: `experiences: []` en el perfil
-
-El perfil no tiene experiencia laboral real. El modelo solo tiene proyectos académicos para rellenar la sección. No es un bug del programa, pero el output se beneficia de que el prompt maneje explícitamente este caso para no inflar proyectos como "experiencia profesional".
+**API keys requeridas** (solo la del proveedor que uses):
+```env
+GEMINI_API_KEY=tu_clave      # Google AI Studio
+DEEPSEEK_API_KEY=tu_clave    # platform.deepseek.com
+```
 
 ---
 
-## Cambios aplicados
+## Feature 1: Mock Interview (`--mock-interview` / `--interview-only`)
 
-### 1. `optimizer.py` — Prompt reescrito
+Simulador interactivo de entrevista técnica donde la IA actúa como reclutador.
 
-| Aspecto | Antes | Después |
-|---------|-------|---------|
-| Tono | Tercera persona, reclutador hablando del candidato | **Primera persona, el candidato habla de sí mismo** |
-| Estilo | Pygmalion Effect, grandilocuente | **Natural, humano, conversacional profesional** |
-| Buzzwords | "Spearheaded", "Robust", "Optimized" (solicitados) | **Prohibidos explícitamente** |
-| Verbos | Verbos genéricos (diseñé, participé) | **Verb + contexto real + resultado** |
-| AI detection | Sin consideración | **Instrucción explícita de sonar humano** |
+### Funcionamiento
 
-**Prompt rules añadidas:**
-- ✅ "Write the professional summary in FIRST PERSON (e.g., 'I am a...', 'My experience...'). Never refer to yourself in third person."
-- ✅ "Use natural, conversational language. Read it aloud — if it sounds like a robot, rewrite it."
-- ✅ "Never use buzzwords like 'spearheaded', 'results-driven', 'synergy', 'proven track record', 'seasoned', 'game-changer'..."
-- ✅ "The final CV must NOT read as AI-generated. It must sound like a real person wrote it."
+1. Gemini/DeepSeek recibe el perfil YAML + la descripción de la vacante como contexto
+2. El modelo hace preguntas sobre tecnologías del CV y la oferta (máx 7)
+3. El candidato responde por consola
+4. Tras 7 preguntas, el modelo da feedback constructivo (fortalezas, áreas de mejora)
+5. Se exporta transcripción a `output/job_NOMBRE/interview_transcript.md`
 
-### 2. `renderers.py` — Footer eliminado
+### Reglas del entrevistador (system prompt)
 
-- Eliminado el footer que revelaba generación por IA.
-- Ajustado el espaciado final en Markdown para que termine limpio.
-- HTML ya no muestra el mensaje "optimizado por IA".
+- Solo pregunta sobre tecnologías en CV ∩ JD
+- Si el perfil no tiene experiencia laboral, no pregunta "cuéntame de tu último trabajo"
+- Progresión: general → específico → escenario práctico
+- Tono profesional, lenguaje natural, sin revelar que es IA
+- Máximo 7 preguntas, luego feedback
 
-### 3. `optimizer.py` — Temperatura ajustada
+### Multi-turn chat (memoria)
 
-| Parámetro | Antes | Después |
-|-----------|-------|---------|
-| `temperature` | 0.2 | 0.7 |
+El historial crece con cada turno. Gemini usa `contents` (formato Google), DeepSeek usa `messages` (formato OpenAI). El servicio convierte automáticamente entre formatos.
 
-Se mantiene `response_schema=OptimizedCV` (validación Pydantic), lo que evita alucinaciones estructurales. La temperatura más alta solo afecta la redacción, no la veracidad de los datos.
+### Comandos
 
-### 4. `renderers.py` + `models.py` — Formato mejorado y secciones nuevas
+```bash
+# Optimizar + entrevista (mismo comando)
+python src/cv_optimizer.py -j jobs/oferta.txt --mock-interview
 
-- Skills ahora listados con viñetas (`-`) en vez de coma separada para mejor densidad semántica (más peso ATS).
-- Headers simplificados a estándar ATS: "Habilidades", "Educación" (ya no "y Tecnologías" ni "y Proyectos Académicos").
-- **Nueva sección `Proyectos`**: schema Pydantic `OptimizedProject` + renderizado en Markdown y HTML.
-- **Nueva sección `Certificaciones`**: schema Pydantic `Certification` + renderizado en Markdown y HTML.
-- CSS muerto del footer eliminado del template HTML.
+# Solo entrevista (sin re-optimizar, usa el CV ya generado)
+python src/cv_optimizer.py -j jobs/oferta.txt --interview-only
 
----
+# Con DeepSeek
+python src/cv_optimizer.py -j jobs/oferta.txt --interview-only -m deepseek
+```
 
-## Buenas prácticas implementadas (desde GOOD_PRACTICES.md)
-
-| Práctica | Estado |
-|----------|--------|
-| Single-column layout | ✅ Ya implementado en HTML |
-| Standard section headers | ✅ "Resumen Profesional", "Experiencia", "Educación", "Habilidades", "Proyectos", "Certificaciones" |
-| No tables/graphics/icons | ✅ Markdown plano, HTML sin tablas |
-| Quantifiable metrics | ✅ Prompt instruye fórmula [Verbo] + [Tarea] + [Resultado cuantificable] + [Contexto] |
-| Mirror job description language | ✅ Prompt instruye reflejar lenguaje de la oferta |
-| Avoid AI phrases (spearheaded, etc.) | ✅ Nuevo prompt los prohíbe explícitamente |
-| First person | ✅ Nuevo prompt fuerza primera persona |
-| No AI disclosure footer | ✅ Footer eliminado |
-| Human-in-the-loop review | ✅ El programa no cambia, pero el prompt mejora la calidad base |
-| Keyword in context | ✅ Prompt instruye colocar keywords en achievements |
-| Acronyms + full forms | ✅ Prompt instruye incluir ambos |
-| No hallucination | ✅ Ya implementado (regla de veracidad en prompt + schema Pydantic) |
+En modo interactivo (`-i`), al finalizar la optimización pregunta si querés ejecutar la entrevista.
 
 ---
 
-## Lo que NO cambió (core preservado)
+## Feature 2: Robustness Judge (`--robustness`)
 
-- **Pipeline completo**: profile → job → Gemini → Pydantic → Markdown/HTML
-- **Estructura de módulos**: `file_io.py`, `models.py`, `optimizer.py`, `renderers.py`
-- **CLI interface**: mismos flags `-j`, `-p`, `-o`, `-l`, `-t`
-- **Validación Pydantic**: `OptimizedCV` como schema de respuesta
-- **Idiomas**: español/inglés (`-l es|en`)
-- **Salidas duales**: Markdown + HTML siempre
-- **Veracidad**: nunca inventar logros, fechas o métricas
+Validador LLM-as-a-Judge que audita el CV generado contra el perfil YAML original.
+
+### Funcionamiento
+
+1. Toma el CV generado (Markdown) y el perfil YAML (fuente de verdad)
+2. Gemini/DeepSeek compara documento contra documento
+3. Detecta: alucinaciones (datos inventados), métricas falsas, cargos inflados, tecnologías añadidas
+4. Asigna severidad a cada hallazgo: `baja`, `media`, `alta`
+5. Calcula `score_honestidad` (0-100)
+6. Exporta reporte JSON a `output/job_NOMBRE/robustness_report.json`
+
+### Modelos Pydantic
+
+```python
+class Alucinacion(BaseModel):
+    linea_cv: str          # línea del CV con el dato inventado
+    dato_inventado: str    # qué dato específico fue inventado
+    severidad: str         # 'baja', 'media', 'alta'
+
+class ReporteRobustez(BaseModel):
+    score_honestidad: int                    # 0-100
+    alucinaciones_detectadas: List[Alucinacion]
+    comentario_auditor: str                  # resumen y recomendaciones
+```
+
+### Reglas del auditor (system prompt)
+
+- No penaliza reformulaciones legítimas (solo datos inventados)
+- Penaliza: métricas sin respaldo, cargos inflados, tecnologías no listadas, fechas alteradas
+- Score: 95-100 veraz, 80-94 exageración menor, 60-79 datos no verificables, <59 alucinaciones graves
+- Comentario constructivo y específico, no genérico
+
+### Structured Outputs por proveedor
+
+| Proveedor | Método |
+|-----------|--------|
+| Gemini | `response_schema=ReporteRobustez` (nativo Pydantic) |
+| DeepSeek | `response_format={"type": "json_object"}` + schema JSON en system prompt |
+
+### Comandos
+
+```bash
+# Optimizar + auditar
+python src/cv_optimizer.py -j jobs/oferta.txt --robustness
+
+# Con DeepSeek
+python src/cv_optimizer.py -j jobs/oferta.txt --robustness -m deepseek
+
+# Todo junto
+python src/cv_optimizer.py -j jobs/oferta.txt --mock-interview --robustness
+```
+
+---
+
+## Formato de salidas
+
+Cada oferta laboral genera su propia carpeta dentro de `output/`:
+
+```
+output/
+  job_ImproveSolutionsSAS/
+    optimized_cv_v001.md           ← CV optimizado (Markdown)
+    optimized_cv_v001.html         ← CV optimizado (HTML, imprimible a PDF)
+    optimized_cv_v001.docx         ← CV optimizado (DOCX Harvard ATS)
+    interview_transcript.md        ← Transcripción de entrevista (--mock-interview)
+    robustness_report.json         ← Reporte de auditoría (--robustness)
+```
+
+- `.md`, `.html`, `.docx` se **versonan** (`_v001`, `_v002`, ...) — nunca se sobrescriben
+- `interview_transcript.md` y `robustness_report.json` **se sobrescriben** en cada ejecución
 
 ---
 
 ## Cómo usar
-
-### Modo rápido (flags por línea de comandos)
-
-```bash
-python src/cv_optimizer.py -j jobs/oferta.txt -p config/student_profile.yaml -o output/mi_cv.md -l es -m gemini
-```
 
 ### Modo interactivo (recomendado)
 
@@ -180,50 +207,38 @@ python src/cv_optimizer.py -j jobs/oferta.txt -p config/student_profile.yaml -o 
 python src/cv_optimizer.py -i
 ```
 
-El CLI te guía paso a paso: modelo → perfil → oferta → idioma → template → confirmación.
+El CLI guía paso a paso: modelo → perfil → oferta → idioma → template → confirmación. Al finalizar pregunta si querés ejecutar entrevista simulada y/o auditoría de robustez.
+
+### Modo directo (flags)
+
+```bash
+# Solo optimizar CV
+python src/cv_optimizer.py -j jobs/oferta.txt
+
+# Optimizar + entrevista + auditoría
+python src/cv_optimizer.py -j jobs/oferta.txt --mock-interview --robustness
+
+# Solo entrevista (CV ya optimizado)
+python src/cv_optimizer.py -j jobs/oferta.txt --interview-only
+
+# Con DeepSeek en vez de Gemini
+python src/cv_optimizer.py -j jobs/oferta.txt --robustness -m deepseek
+```
 
 ### Flags disponibles
 
 | Flag | Default | Descripción |
 |------|---------|-------------|
-| `-j`, `--job` | *(requerido)* | Ruta al `.txt` con la descripción de la vacante. Solo en modo no interactivo. |
+| `-j`, `--job` | *(requerido)* | Ruta al `.txt` con la descripción de la vacante. |
 | `-p`, `--profile` | `config/student_profile.yaml` | Ruta al perfil YAML del estudiante. |
-| `-o`, `--output` | `output/optimized_cv.md` | Ruta base de salida. Siempre se auto-versiona (`_v001`, `_v002`, ...). |
+| `-o`, `--output` | `output/optimized_cv.md` | Ruta base de salida (auto-versionada). |
 | `-l`, `--lang` | `es` | Idioma: `es` (español) o `en` (inglés). |
 | `-t`, `--template` | `templates/cv_template.html` | Plantilla HTML Jinja2. |
-| `-m`, `--model` | `gemini` | Modelo: `gemini` (Gemini 2.5 Flash) o `deepseek` (DeepSeek V4 Pro). |
-| `-i`, `--interactive` | *(flag)* | Lanza el CLI interactivo. Ignora el resto de flags excepto `-o`. |
-
-### Directorio `jobs/`
-
-Coloca tus descripciones de vacantes como archivos `.txt` dentro de `jobs/`. El CLI interactivo las lista automáticamente para que elijas.
-
-```
-jobs/
-  oferta_backend.txt
-  oferta_soporte.txt
-  oferta_frontend.txt
-```
-
-Si el directorio no existe, el programa lo crea automáticamente al entrar en modo interactivo.
-
-### Versionado de outputs
-
-Cada oferta laboral genera su propia carpeta. Los archivos se versionan automáticamente:
-
-```
-output/
-  job_improvesolutions/
-    optimized_cv_v001.md
-    optimized_cv_v001.html
-    optimized_cv_v002.md
-    optimized_cv_v002.html
-  job_frontend/
-    optimized_cv_v001.md
-    optimized_cv_v001.html
-```
-
-La carpeta se nombra a partir del archivo de oferta: `jobs/...improvesolutions.txt` → `output/job_improvesolutions/`. Nunca se sobrescribe. MD y HTML siempre quedan pareados con el mismo número de versión.
+| `-m`, `--model` | `gemini` | Modelo para los 3 features: `gemini` o `deepseek`. |
+| `-i`, `--interactive` | *(flag)* | CLI interactivo paso a paso. |
+| `--mock-interview` | *(flag)* | Optimiza CV + lanza entrevista simulada. |
+| `--interview-only` | *(flag)* | Solo entrevista (sin re-optimizar). Requiere `-j`. |
+| `--robustness` | *(flag)* | Optimiza CV + ejecuta auditoría de robustez. |
 
 ### Variables de entorno (`.env`)
 
@@ -239,56 +254,27 @@ Solo necesitás la key del proveedor que vayas a usar. El programa falla con un 
 
 ---
 
-## Próximas mejoras sugeridas (fuera del alcance actual)
+## Buenas prácticas implementadas
 
-1. **Análisis de keywords**: Extraer y mostrar qué keywords de la oferta están cubiertas vs. faltantes.
-2. **ATS score**: Calcular 0-100 de compatibilidad con ATS.
-3. **Soporte DOCX**: Generar .docx (formato preferido por ATS según GOOD_PRACTICES.md).
-4. **Modo "humanización"**: Segunda pasada que detecte y remueva frases AI-genéricas.
-5. **Multi-modelo**: Soportar Claude, GPT-4, etc. (estructura ya lo permite).
-6. **Modo draft/sugerencia**: Que el output sean sugerencias editables, no el CV final.
-
----
-
-## Auditoría cruzada: DeepSeek vs ChatGPT (reportes de buenas prácticas)
-
-Se comparó el reporte original (`REPORT_GOOD_PRACTICES_DEEPSEEK.md`) con uno nuevo generado por ChatGPT (`REPORT_GOOD_PRACTICES_GPT.md`). Ambos coinciden en ~90% de las prácticas. Las diferencias clave y su resolución:
-
-### Concordancias (ya cubiertas)
-
-| Práctica | Ambos reportes | Estado |
-|----------|---------------|--------|
-| Single-column, sin tablas/gráficos | ✅✅ | Implementado |
-| Headers estándar ATS | ✅✅ | Implementado |
-| Mirror de keywords de la oferta | ✅✅ | En prompt |
-| Métricas cuantificables | ✅✅ | Fórmula de bullets |
-| Sin buzzwords AI | ✅✅ | Prohibidos en prompt |
-| Primera persona | ✅✅ | Prompt lo fuerza |
-| Sin datos personales (edad, foto, etc.) | ✅✅ | Perfil no los incluye |
-| Formato de fechas consistente | ✅✅ | Perfil YAML |
-
-### Discrepancias resueltas
-
-| Práctica | DeepSeek | ChatGPT | Acción |
-|----------|----------|---------|--------|
-| Emojis en contacto | No mencionado | ❌ Explícitamente prohibido (rompen ATS) | **Eliminados** de Markdown y HTML |
-| Secciones vacías | No mencionado | ❌ Implícito (no listar lo que no hay) | **Condicional**: `## Experiencia` solo si `experiences` no vacío |
-| Tiempos verbales | No mencionado | ✅ Presente para actual, pasado para previo | **Añadido al prompt** |
-| Orden cronológico | No mencionado | ✅ Reverse-chronological | **Añadido al prompt** |
-| Keyword stuffing | No mencionado | ❌ Explícitamente penalizado | **Añadido al prompt** |
-| Nombre de archivo | No mencionado | ✅ `Nombre_Apellido_Rol.docx` | Sugerido (futuro) |
-| .docx preferido | ✅ Mencionado | ✅ Mencionado | En roadmap |
-| Fuente (Calibri/Arial) | ✅ Calibri, Arial, Georgia | ✅ Calibri, Arial, Times | HTML usa Inter — ATS-safe al imprimir |
-
-### Solo en ChatGPT (no en DeepSeek)
-
-| Práctica | Prioridad | Estado |
-|----------|-----------|--------|
-| Plain-text test (convertir a .txt y verificar) | Baja | No implementado |
-| Metadata limpia en archivo | Baja | No implementado |
-| Checklist pre-submission automático | Baja | ✅ Ya implementado en consola |
-| No color ni íconos | Media | HTML tiene borde accent — no crítico |
-| Filename con nombre del candidato | Baja | El usuario elige con `-o` |
+| Práctica | Estado |
+|----------|--------|
+| Single-column layout | ✅ HTML y DOCX |
+| Standard section headers | ✅ "Habilidades", "Experiencia", "Educación", "Proyectos", "Certificaciones" |
+| No tables/graphics/icons | ✅ Markdown plano, HTML sin tablas |
+| Quantifiable metrics | ✅ Fórmula [Verbo] + [Tarea] + [Resultado] + [Contexto] |
+| Mirror job description language | ✅ Prompt instruye reflejar lenguaje de la oferta |
+| Avoid AI phrases | ✅ Prohibidos: spearheaded, results-driven, synergy, etc. |
+| First person | ✅ Prompt fuerza primera persona |
+| No AI disclosure footer | ✅ Eliminado de MD, HTML y DOCX |
+| Human-in-the-loop review | ✅ Checklist pre-submission en consola |
+| Keyword in context | ✅ Keywords dentro de logros reales, no stuffing |
+| ATS-ready format | ✅ DOCX Harvard con python-docx, MD plano |
+| Secciones vacías omitidas | ✅ `## Experiencia` solo si hay experiences |
+| Tiempos verbales correctos | ✅ Presente para roles en curso, pasado para completados |
+| Orden cronológico inverso | ✅ Experiencias y proyectos más recientes primero |
+| Sin emojis en contacto | ✅ Solo texto plano en info de contacto |
+| Multi-modelo | ✅ Gemini 2.5 Flash + DeepSeek V4 Pro en los 3 features |
+| Auditoría de veracidad | ✅ Robustness Judge: score 0-100, alucinaciones detectadas |
 
 ---
 
@@ -296,5 +282,7 @@ Se comparó el reporte original (`REPORT_GOOD_PRACTICES_DEEPSEEK.md`) con uno nu
 
 - `REPORT_GOOD_PRACTICES_DEEPSEEK.md` — Reporte de buenas prácticas (DeepSeek, Mayo 2026).
 - `REPORT_GOOD_PRACTICES_GPT.md` — Reporte de buenas prácticas (ChatGPT, Mayo 2026).
-- Estructura Pydantic documentada en `src/models.py`.
+- `HOMEWORK.md` — Roadmap de implementación con criterios de aceptación.
+- `COMANDOS.md` — Cheatsheet rápida de comandos.
+- Schemas Pydantic documentados en `src/models.py`.
 - Template HTML en `templates/cv_template.html`.

@@ -1,5 +1,6 @@
 # COMANDOS — jr-career-copilot
-COMANDO PARA INICIAR EN MENÚ INTERCATIVO DE CLI:
+
+COMANDO PARA INICIAR EN MENÚ INTERACTIVO DE CLI:
 python src/cv_optimizer.py -i
 
 ## Requisitos previos
@@ -11,41 +12,69 @@ jobs/
   oferta_soporte.txt
 ```
 
-## Entrevista simulada (sin re-optimizar)
+## Multi-proveedor: Gemini y DeepSeek
 
-Si ya optimizaste el CV y solo quieres practicar la entrevista:
+El flag `-m` controla el modelo para **los tres features** (optimizador, entrevista, auditoría):
 
 ```bash
+# Gemini (default) — optimiza, entrevista y audita con Gemini 2.5 Flash
+python src/cv_optimizer.py -j jobs/oferta.txt --mock-interview --robustness
+
+# DeepSeek — optimiza, entrevista y audita con DeepSeek V4 Pro
+python src/cv_optimizer.py -j jobs/oferta.txt --mock-interview --robustness -m deepseek
+```
+
+## Entrevista simulada
+
+```bash
+# Solo entrevista, sin re-optimizar (Gemini)
 python src/cv_optimizer.py -j jobs/job_ImproveSolutionsSAS.txt --interview-only
-```
 
-## Entrevista simulada (optimizar + entrevista)
+# Solo entrevista con DeepSeek
+python src/cv_optimizer.py -j jobs/job_ImproveSolutionsSAS.txt --interview-only -m deepseek
 
-```bash
+# Optimizar + entrevista (Gemini)
 python src/cv_optimizer.py -j jobs/job_ImproveSolutionsSAS.txt --mock-interview
+
+# Optimizar + entrevista (DeepSeek)
+python src/cv_optimizer.py -j jobs/job_ImproveSolutionsSAS.txt --mock-interview -m deepseek
 ```
 
-## Auditoría de robustez (optimizar + auditar)
+## Auditoría de robustez
 
 ```bash
+# Optimizar + auditar (Gemini)
 python src/cv_optimizer.py -j jobs/job_ImproveSolutionsSAS.txt --robustness
+
+# Optimizar + auditar (DeepSeek)
+python src/cv_optimizer.py -j jobs/job_ImproveSolutionsSAS.txt --robustness -m deepseek
 ```
 
 Genera `robustness_report.json` con score de honestidad (0-100), alucinaciones detectadas y comentario del auditor.
 
-## Todo junto (optimizar + entrevista + auditoría)
+## Todo junto
 
 ```bash
+# Optimizar + entrevista + auditoría (Gemini)
 python src/cv_optimizer.py -j jobs/job_ImproveSolutionsSAS.txt --mock-interview --robustness
+
+# Optimizar + entrevista + auditoría (DeepSeek)
+python src/cv_optimizer.py -j jobs/job_ImproveSolutionsSAS.txt --mock-interview --robustness -m deepseek
 ```
+
 ---
+
 ## Modo interactivo (recomendado)
 
 ```bash
 python src/cv_optimizer.py -i
 ```
 
-El CLI te guía paso a paso. Podés salir con `0` en cualquier menú.
+El CLI te guía paso a paso. Al finalizar la optimización pregunta si querés:
+- Ejecutar entrevista simulada (con el modelo elegido)
+- Ejecutar auditoría de robustez (con el modelo elegido)
+
+Podés salir con `0` en cualquier menú.
 
 ---
 
@@ -85,12 +114,12 @@ python src/cv_optimizer.py -j jobs/oferta.txt -l en
 | `-p` | `config/student_profile.yaml` | Tu perfil YAML |
 | `-o` | `output/optimized_cv.md` | Ruta base de salida |
 | `-l` | `es` | Idioma: `es` o `en` |
-| `-m` | `gemini` | Modelo: `gemini` o `deepseek` |
+| `-m` | `gemini` | Modelo para los 3 features: `gemini` o `deepseek` |
 | `-t` | `templates/cv_template.html` | Plantilla HTML |
 | `-i` | — | Modo interactivo |
 | `--mock-interview` | — | Optimiza CV + simulador de entrevista técnica |
 | `--interview-only` | — | Solo entrevista (sin re-optimizar). Requiere `-j` |
-| `--robustness` | — | Validador LLM-as-a-Judge sobre el CV generado |
+| `--robustness` | — | Optimiza CV + auditoría LLM-as-a-Judge |
 
 ---
 
@@ -114,4 +143,4 @@ output/
 - **interview_transcript.md** — Transcripción de la entrevista simulada (preguntas, respuestas, feedback)
 - **robustness_report.json** — Reporte de auditoría: score de honestidad, alucinaciones, comentarios
 
-Nunca se sobrescribe. Cada job tiene su espacio aislado.
+Los CV (.md, .html, .docx) nunca se sobrescriben — se versionan (_v001, _v002...). La transcripción y el reporte se sobrescriben en cada ejecución.
